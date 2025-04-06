@@ -1,0 +1,9 @@
+export const CREATED = "Created successfully...";
+export const UPDATED = "Updated successfully...";
+export const DELETED = "Deleted successfully...";
+export const FETCHED = "Fetched successfully...";
+export const BAD_REQUEST = "Bad request...";
+export const NOT_FOUND = "Not found...";
+export const UNAUTHORIZED = "Unauthorized...";
+export const FORBIDDEN = "Forbidden...";
+export const INTERNAL_SERVER_ERROR = "Internal server error...";
