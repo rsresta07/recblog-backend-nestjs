@@ -1,12 +1,10 @@
 import { Exclude } from "class-transformer";
 import { GenericEntity } from "src/core/generic.entity";
-import { Project } from "src/project/entities/project.entity";
 import { RoleEnum, StatusEnum } from "src/utils/enum/role";
 import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
 
