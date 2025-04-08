@@ -1,2 +1,3 @@
-export const LOGGED_IN = "Logged in sucessfully";
-export const REGISTERED = "Registered sucessfully";
+export const LOGGED_IN = "Logged in successfully";
+export const REGISTERED = "Registered successfully";
+export const CREATED = "Created successfully";
