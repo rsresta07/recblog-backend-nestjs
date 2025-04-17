@@ -36,16 +36,18 @@ export class AuthService {
         const data = {
           email: email?.trim(),
           password: hashedPassword,
-          role: RoleEnum.SUPER_ADMIN,
+          role: RoleEnum.USER,
+          // If you want to make the status to be pending when creating account remove the status below
+          status: StatusEnum.APPROVED,
         };
-        const { password, ...restpart } = await this.userRepo.save(data);
+        const { password, ...restPart } = await this.userRepo.save(data);
 
-        const token: any = await this.generateToken(restpart);
+        const token: any = await this.generateToken(restPart);
 
         return {
-          id: restpart.id,
-          email: restpart.email,
-          role: restpart.role,
+          id: restPart.id,
+          email: restPart.email,
+          role: restPart.role,
           token,
           refreshToken: "",
         };

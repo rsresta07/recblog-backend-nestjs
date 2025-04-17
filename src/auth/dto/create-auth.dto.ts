@@ -35,12 +35,12 @@ export class RegisterUserDto {
   contact: string;
 
   @IsOptional()
-  @ApiProperty({ example: "PENDING" })
+  @ApiProperty({ example: "APPROVED" })
   status: any;
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ example: "koteshowr" })
+  @ApiProperty({ example: "koteshwor" })
   location: string;
 
   @IsOptional()
