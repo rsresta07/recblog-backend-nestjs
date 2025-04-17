@@ -5,8 +5,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   PrimaryGeneratedColumn,
 } from "typeorm";
+import { Post } from "../../post/entities/post.entity";
 
 @Entity("users")
 export class User extends GenericEntity {
@@ -31,4 +33,10 @@ export class User extends GenericEntity {
 
   @CreateDateColumn()
   last_login_at: Date;
+
+  @ManyToMany(() => Post, (post) => post.users, {
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION",
+  })
+  posts?: Post[];
 }
