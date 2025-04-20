@@ -1,11 +1,34 @@
-import { Injectable } from '@nestjs/common';
-import { CreateTagDto } from './dto/create-tag.dto';
-import { UpdateTagDto } from './dto/update-tag.dto';
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { CreateTagDto } from "./dto/create-tag.dto";
+import { UpdateTagDto } from "./dto/update-tag.dto";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Post } from "../post/entities/post.entity";
+import { Repository } from "typeorm";
+import { User } from "../user/entities/user.entity";
+import { Tag } from "./entities/tag.entity";
 
 @Injectable()
 export class TagsService {
-  create(createTagDto: CreateTagDto) {
-    return 'This action adds a new tag';
+  constructor(
+    @InjectRepository(Post)
+    private postRepository: Repository<Post>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Tag)
+    private tagRepository: Repository<Tag>
+  ) {}
+
+  async create(createTagDto: CreateTagDto) {
+    try {
+      const newTag = this.tagRepository.create(createTagDto);
+      await this.tagRepository.save(newTag);
+      return;
+    } catch (error) {
+      throw new HttpException(
+        `Error creating: ${error}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
   }
 
   findAll() {

@@ -23,6 +23,9 @@ export class Post extends GenericEntity {
   @Column({ type: "varchar", name: "image" })
   image: string;
 
+  @Column({ type: "varchar", name: "slug" })
+  slug: string;
+
   @Column({ type: "boolean", name: "status" })
   status: boolean;
 
