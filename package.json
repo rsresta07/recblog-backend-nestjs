@@ -26,6 +26,7 @@
     "seed:run": "ts-node -r tsconfig-paths/register --project ./tsconfig.json ./node_modules/typeorm-seeding/dist/cli.js seed --root src/infrastructure/configs"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.0.1",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
