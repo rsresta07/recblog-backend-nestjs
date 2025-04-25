@@ -16,7 +16,7 @@ export class Tag {
   @Column({ type: "varchar", length: 255, name: "title" })
   title: string;
 
-  @Column({ type: "varchar", name: "slug" })
+  @Column({ type: "varchar", name: "slug", default: "temp-slug" })
   slug: string;
 
   @Column({ type: "varchar", length: 255, name: "status" })

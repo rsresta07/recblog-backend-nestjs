@@ -47,9 +47,10 @@ export class TagsService {
     try {
       return await this.tagRepository
         .createQueryBuilder("tags")
-        .leftJoinAndSelect("tags.users", "users")
+        .leftJoin("tags.users", "users")
         // .leftJoinAndSelect("tags.posts", "post")
         .orderBy("tags.title", "DESC")
+        .addSelect(["users.id", "users.email", "users.fullName"])
         .getMany();
     } catch (error) {
       throw new HttpException(
@@ -67,7 +68,7 @@ export class TagsService {
         .where("tags.status = :status", { status: true })
         .leftJoin("tags.users", "users")
         // .leftJoinAndSelect("tags.posts", "post")
-        .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
+        .addSelect(["users.id", "users.email", "users.fullName"])
         .orderBy("tags.title", "DESC")
         .getMany();
     } catch (error) {
@@ -83,8 +84,8 @@ export class TagsService {
       return await this.tagRepository
         .createQueryBuilder("tag")
         .where({ slug })
-        .leftJoin("tag.users", "user")
-        .addSelect(["users.id", "users.email"])
+        .leftJoin("tag.users", "users")
+        .addSelect(["users.id", "users.email", "users.fullName"])
         // .leftJoinAndSelect("tag.posts", "post")
         .getOneOrFail();
     } catch (error) {

@@ -52,11 +52,10 @@ export class PostService {
     try {
       return await this.postRepository
         .createQueryBuilder("posts")
-        .leftJoinAndSelect("posts.users", "users")
+        .leftJoin("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
-        .addSelect(["users.id", "users.email"])
+        .addSelect(["users.id", "users.email", "users.fullName"])
         .orderBy("posts.title", "DESC")
-
         .getMany();
     } catch (error) {
       throw new HttpException(
@@ -74,7 +73,7 @@ export class PostService {
         .where("posts.status = :status", { status: true })
         .leftJoin("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
-        .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
+        .addSelect(["users.id", "users.email", "users.fullName"])
         .orderBy("posts.title", "DESC")
         .getMany();
     } catch (error) {
@@ -90,8 +89,9 @@ export class PostService {
       return await this.postRepository
         .createQueryBuilder("post")
         .where({ slug })
-        .leftJoinAndSelect("post.users", "user")
+        .leftJoin("post.users", "users")
         .leftJoinAndSelect("post.tags", "tag")
+        .addSelect(["users.id", "users.email", "users.fullName"])
         .getOneOrFail();
     } catch (error) {
       throw new HttpException(
