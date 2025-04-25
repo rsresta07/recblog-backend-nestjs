@@ -21,14 +21,14 @@ import { CREATED } from "../auth/auth.constant";
 export class PostController {
   constructor(private readonly postService: PostService) {}
 
-  //* Create New Student
+  //* Create New Post
   @Post("/create")
   @ResponseMessage(CREATED)
   async create(@Body() createPostDto: CreatePostDto) {
     return this.postService.create(createPostDto);
   }
 
-  //* Get all post
+  //* Get all Posts
   @Get("/all")
   @UseInterceptors(ClassSerializerInterceptor)
   findAll() {
@@ -42,7 +42,7 @@ export class PostController {
     return this.postService.findActive();
   }
 
-  //* Get post details
+  //* Get post-details
   @Get("/:slug")
   @UseInterceptors(ClassSerializerInterceptor)
   findOne(@Param("slug") slug: string) {

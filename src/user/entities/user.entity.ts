@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { Post } from "../../post/entities/post.entity";
+import { Tag } from "../../tags/entities/tag.entity";
 
 @Entity("users")
 export class User extends GenericEntity {
@@ -17,6 +18,12 @@ export class User extends GenericEntity {
 
   @Column({ unique: true })
   email: string;
+
+  @Column({ type: "varchar", length: 100, unique: true })
+  username: string;
+
+  @Column({ type: "varchar", name: "full_name" })
+  fullName: string;
 
   @Exclude()
   @Column()
@@ -39,4 +46,10 @@ export class User extends GenericEntity {
     onUpdate: "NO ACTION",
   })
   posts?: Post[];
+
+  @ManyToMany(() => Tag, (tag) => tag.users, {
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION",
+  })
+  tags?: Tag[];
 }

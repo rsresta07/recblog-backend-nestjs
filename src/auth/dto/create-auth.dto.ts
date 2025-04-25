@@ -16,8 +16,13 @@ export class LoginAuthDto {
 export class RegisterUserDto {
   @IsNotEmpty()
   @IsString()
-  @ApiProperty({ example: "username" })
+  @ApiProperty({ example: "chaaku" })
   username: string;
+
+  @IsNotEmpty()
+  @IsString()
+  @ApiProperty({ example: "Rameshwor Shrestha" })
+  fullName: string;
 
   @IsNotEmpty()
   @IsEmail()

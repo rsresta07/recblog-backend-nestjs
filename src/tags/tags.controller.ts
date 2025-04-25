@@ -17,35 +17,48 @@ import { ResponseMessage } from "../core/decorators/response.decorator";
 import { CREATED } from "../auth/auth.constant";
 
 @ApiTags("Tags")
-@Controller("tags")
+@Controller("/tags")
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
+  //* Create New Tag
   @Post("/create")
   @ResponseMessage(CREATED)
-  create(@Body() createTagDto: CreateTagDto) {
+  async create(@Body() createTagDto: CreateTagDto) {
     return this.tagsService.create(createTagDto);
   }
 
-  @Get()
+  //* Get all Tags
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get("/all")
   @UseInterceptors(ClassSerializerInterceptor)
   findAll() {
     return this.tagsService.findAll();
   }
 
-  @Get(":id")
+  //* Get active tags
   @UseInterceptors(ClassSerializerInterceptor)
-  findOne(@Param("id") id: string) {
-    return this.tagsService.findOne(+id);
+  @Get("/active")
+  @UseInterceptors(ClassSerializerInterceptor)
+  findActive() {
+    return this.tagsService.findActive();
+  }
+
+  //* Get tag-details
+  @UseInterceptors(ClassSerializerInterceptor)
+  @Get("/:slug")
+  @UseInterceptors(ClassSerializerInterceptor)
+  findOne(@Param("slug") slug: string) {
+    return this.tagsService.findOne(slug);
   }
 
   @Patch(":id")
   update(@Param("id") id: string, @Body() updateTagDto: UpdateTagDto) {
-    return this.tagsService.update(+id, updateTagDto);
+    return this.tagsService.update(id, updateTagDto);
   }
 
   @Delete(":id")
   remove(@Param("id") id: string) {
-    return this.tagsService.remove(+id);
+    return this.tagsService.remove(id);
   }
 }
