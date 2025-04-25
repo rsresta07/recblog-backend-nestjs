@@ -29,6 +29,7 @@ export class TagsController {
   }
 
   //* Get all Tags
+  @UseInterceptors(ClassSerializerInterceptor)
   @Get("/all")
   @UseInterceptors(ClassSerializerInterceptor)
   findAll() {
@@ -36,6 +37,7 @@ export class TagsController {
   }
 
   //* Get active tags
+  @UseInterceptors(ClassSerializerInterceptor)
   @Get("/active")
   @UseInterceptors(ClassSerializerInterceptor)
   findActive() {
@@ -43,6 +45,7 @@ export class TagsController {
   }
 
   //* Get tag-details
+  @UseInterceptors(ClassSerializerInterceptor)
   @Get("/:slug")
   @UseInterceptors(ClassSerializerInterceptor)
   findOne(@Param("slug") slug: string) {
