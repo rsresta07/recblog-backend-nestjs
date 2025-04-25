@@ -12,6 +12,9 @@ import { BcryptService } from './auth/bcryptjs/bcrypt.service';
 import { Pagination } from 'nestjs-typeorm-paginate';
 import MailConfig from './config/mail.config';
 import { HealthCheckModule } from './health-check/health-check.module';
+import { PostModule } from './post/post.module';
+import { AboutUsModule } from './about-us/about-us.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { HealthCheckModule } from './health-check/health-check.module';
     AuthModule,
     UserModule,
     HealthCheckModule,
+    PostModule,
+    AboutUsModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [AppService, SeedsService, UserService, BcryptService, Pagination],
