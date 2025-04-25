@@ -67,7 +67,7 @@ export class TagsService {
         .where("tags.status = :status", { status: true })
         .leftJoin("tags.users", "users")
         // .leftJoinAndSelect("tags.posts", "post")
-        // .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
+        .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
         .orderBy("tags.title", "DESC")
         .getMany();
     } catch (error) {
@@ -83,7 +83,8 @@ export class TagsService {
       return await this.tagRepository
         .createQueryBuilder("tag")
         .where({ slug })
-        .leftJoinAndSelect("tag.users", "user")
+        .leftJoin("tag.users", "user")
+        .addSelect(["users.id", "users.email"])
         // .leftJoinAndSelect("tag.posts", "post")
         .getOneOrFail();
     } catch (error) {

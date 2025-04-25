@@ -19,6 +19,12 @@ export class User extends GenericEntity {
   @Column({ unique: true })
   email: string;
 
+  @Column({ type: "varchar", length: 100, unique: true })
+  username: string;
+
+  @Column({ type: "varchar", name: "full_name" })
+  fullName: string;
+
   @Exclude()
   @Column()
   password: string;

@@ -54,7 +54,9 @@ export class PostService {
         .createQueryBuilder("posts")
         .leftJoinAndSelect("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
+        .addSelect(["users.id", "users.email"])
         .orderBy("posts.title", "DESC")
+
         .getMany();
     } catch (error) {
       throw new HttpException(
@@ -72,7 +74,7 @@ export class PostService {
         .where("posts.status = :status", { status: true })
         .leftJoin("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
-        // .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
+        .addSelect(["users.id", "users.email"]) //! Add user other details when the database is updated
         .orderBy("posts.title", "DESC")
         .getMany();
     } catch (error) {
