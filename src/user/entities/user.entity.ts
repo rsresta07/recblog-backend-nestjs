@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 import { Post } from "../../post/entities/post.entity";
+import { Tag } from "../../tags/entities/tag.entity";
 
 @Entity("users")
 export class User extends GenericEntity {
@@ -39,4 +40,10 @@ export class User extends GenericEntity {
     onUpdate: "NO ACTION",
   })
   posts?: Post[];
+
+  @ManyToMany(() => Tag, (tag) => tag.users, {
+    onDelete: "NO ACTION",
+    onUpdate: "NO ACTION",
+  })
+  tags?: Tag[];
 }
