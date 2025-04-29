@@ -1,17 +1,36 @@
+import { adminCredential } from "./seeds.data";
+import { BcryptService } from "src/auth/bcryptjs/bcrypt.service";
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { User } from "../../user/entities/user.entity";
 import { Repository } from "typeorm";
-import { User } from "src/user/entities/user.entity";
-import { UserService } from "src/user/user.service";
+import { UserService } from "../../user/user.service"; // you already imported this in your module
 
 @Injectable()
 export class SeedsService {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly bcryptService: BcryptService
   ) {}
 
-  async seedLegalEntityTypeData() {}
+  async seedAdminData() {
+    const existing = await this.userRepo.findOne({
+      where: { username: adminCredential.username },
+    });
 
-  async seedAdminData() {}
+    if (!existing) {
+      const hashedPassword = await this.bcryptService.hashPassword(
+        adminCredential.password
+      );
+      const adminUser = this.userRepo.create({
+        ...adminCredential,
+        password: hashedPassword,
+      });
+      await this.userRepo.save(adminUser);
+      console.log("✅ Admin user seeded");
+    } else {
+      console.log("⚠️ Admin user already exists");
+    }
+  }
 }

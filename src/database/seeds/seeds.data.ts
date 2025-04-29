@@ -1,3 +1,5 @@
+import { RoleEnum, StatusEnum } from "../../utils/enum/role";
+
 export const legalEntityTypes = [
   "constitution",
   "acts",
@@ -8,8 +10,8 @@ export const legalEntityTypes = [
 ];
 
 export const adminCredential = {
-  username: "JurieaseAdmin",
-  password: "@JurieaseAdmin",
-  role: "admin",
-  status: "PENDING",
+  username: "admin@gmail.com",
+  password: "@password123",
+  role: RoleEnum.SUPER_ADMIN,
+  status: StatusEnum.PENDING,
 };
