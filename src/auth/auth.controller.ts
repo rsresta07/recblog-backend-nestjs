@@ -24,9 +24,9 @@ export class AuthController {
     return this.authService.login(loginAuthDto);
   }
 
-  @Post("/create")
+  @Post("/register")
   @ResponseMessage(REGISTERED)
-  registerUser(@Req() req: any, @Body() createUserDto: RegisterUserDto) {
-    return this.authService.createUser(req.user, createUserDto);
+  registerUser(@Body() createUserDto: RegisterUserDto) {
+    return this.authService.createUser(createUserDto);
   }
 }

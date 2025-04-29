@@ -20,14 +20,14 @@ export class AuthService {
     private readonly dataSource: DataSource
   ) {}
 
-  async createUser(currentUser, createUserDto: RegisterUserDto) {
+  async createUser(createUserDto: RegisterUserDto) {
     try {
       const userExists = await this.CheckUserExists(createUserDto);
       const { email, password, ...rest } = createUserDto;
       const originalPassword = password?.trim();
 
       if (userExists) {
-        throw new HttpException("User already exists", 500);
+        throw new HttpException("User already exists", HttpStatus.CONFLICT);
       } else {
         const hashedPassword = await this.bcryptService.hashPassword(
           originalPassword
@@ -38,7 +38,7 @@ export class AuthService {
           password: hashedPassword,
           username: createUserDto.username?.trim(),
           fullName: createUserDto.fullName?.trim(),
-          role: RoleEnum.SUPER_ADMIN,
+          role: RoleEnum.USER,
           // If you want to make the status to be pending when creating an account, remove the status below
           status: StatusEnum.APPROVED,
         };
@@ -78,7 +78,10 @@ export class AuthService {
               refreshToken: "",
             };
           } else {
-            throw new HttpException("Email or password incorrect", 500);
+            throw new HttpException(
+              "Email or password incorrect",
+              HttpStatus.UNAUTHORIZED
+            );
           }
         } else {
           throw new HttpException("User not activated", 500);
