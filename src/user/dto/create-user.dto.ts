@@ -24,4 +24,10 @@ export class CreateUserDto {
 
   @IsDate()
   last_login_at: string;
+
+  @IsString()
+  location: string;
+
+  @IsString()
+  contact: string;
 }

@@ -29,6 +29,10 @@ export class Post extends GenericEntity {
   @Column({ type: "boolean", name: "status" })
   status: boolean;
 
+  // tsvector
+  @Column({ type: "tsvector", nullable: true })
+  search_vector: string;
+
   // Many-to-Many relation between post and tags
   @ManyToMany(() => Tag, (tag) => tag.posts, {
     onDelete: "NO ACTION",

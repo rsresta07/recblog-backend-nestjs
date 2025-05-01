@@ -39,6 +39,8 @@ export class AuthService {
           username: createUserDto.username?.trim(),
           fullName: createUserDto.fullName?.trim(),
           role: RoleEnum.USER,
+          location: createUserDto.location?.trim(),
+          contact: createUserDto.contact?.trim(),
           // If you want to make the status to be pending when creating an account, remove the status below
           status: StatusEnum.APPROVED,
         };
