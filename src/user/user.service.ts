@@ -24,15 +24,31 @@ export class UserService {
     }
   }
 
-  async findOne(id: number) {
-    try {
-      const singleUser = await this.userRepo
-        .createQueryBuilder("user")
-        .where("user.id = :id", { id })
-        .getOneOrFail();
-      return singleUser;
-    } catch (error) {
-      throw new HttpException(`${error}`, HttpStatus.BAD_REQUEST);
-    }
+  async findOne(slug: string) {
+    return this.userRepo
+      .createQueryBuilder("user")
+      .select([
+        "user.id",
+        "user.email",
+        "user.username",
+        "user.fullName",
+        "user.location",
+        "user.contact",
+        "user.role",
+        "user.status",
+      ])
+      .leftJoin("user.posts", "posts")
+      .addSelect([
+        "posts.id",
+        "posts.title",
+        "posts.image",
+        "posts.slug",
+        "posts.status",
+      ])
+      .leftJoin("posts.tags", "tags")
+      .addSelect(["tags.id", "tags.title"])
+      .where("user.username = :username", { username: slug })
+      .orderBy("posts.createdAt", "DESC")
+      .getOneOrFail();
   }
 }

@@ -19,7 +19,13 @@ import { RolesGuard } from "src/auth/guard/role.guard";
 import { ResponseMessage } from "src/core/decorators/response.decorator";
 
 @ApiTags("User")
-@Controller("/api/v1/user")
+@Controller("/user")
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+  @Get("details/:slug")
+  @UseInterceptors(ClassSerializerInterceptor)
+  findOne(@Param("slug") slug: string) {
+    return this.userService.findOne(slug);
+  }
 }
