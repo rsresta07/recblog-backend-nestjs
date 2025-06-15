@@ -78,6 +78,7 @@ export class AuthService {
               role: userData?.role,
               token,
               refreshToken: "",
+              slug: userData?.username,
             };
           } else {
             throw new HttpException(

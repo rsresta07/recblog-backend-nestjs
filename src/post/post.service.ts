@@ -108,4 +108,37 @@ export class PostService {
   remove(id: string) {
     return `This action removes a #${id} post`;
   }
+
+  // search post
+  async searchPosts(query: string): Promise<Post[]> {
+    if (!query || typeof query !== "string") {
+      throw new HttpException(
+        "Missing or invalid query parameter `q`",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    console.log("Search query:", query);
+
+    try {
+      return await this.postRepository.query(
+        `
+      SELECT  
+        p.title AS name,
+        p.content,
+        p.slug,
+        p.image
+      FROM posts p
+      WHERE search_vector @@ plainto_tsquery('english', $1)
+      ORDER BY ts_rank(search_vector, plainto_tsquery('english', $1)) DESC
+      `,
+        [query]
+      );
+    } catch (error) {
+      throw new HttpException(
+        `Search failed: ${error}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
 }

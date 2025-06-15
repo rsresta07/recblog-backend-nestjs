@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
   UseGuards,
+  Query,
 } from "@nestjs/common";
 import { PostService } from "./post.service";
 import { CreatePostDto } from "./dto/create-post.dto";
@@ -54,7 +55,7 @@ export class PostController {
   }
 
   //* Get post-details
-  @Get("/:slug")
+  @Get("details/:slug")
   @UseInterceptors(ClassSerializerInterceptor)
   findOne(@Param("slug") slug: string) {
     return this.postService.findOne(slug);
@@ -74,5 +75,11 @@ export class PostController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   remove(@Param("id") id: string) {
     return this.postService.remove(id);
+  }
+
+  // Search post
+  @Get("/search")
+  searchPosts(@Query("q") query: string) {
+    return this.postService.searchPosts(query);
   }
 }
