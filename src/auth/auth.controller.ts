@@ -13,7 +13,7 @@ import { ResponseMessage } from "src/core/decorators/response.decorator";
 import { LOGGED_IN, REGISTERED, CREATED } from "./auth.constant";
 
 @ApiTags("Auth")
-@Controller("/api/v1/auth")
+@Controller("/auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
