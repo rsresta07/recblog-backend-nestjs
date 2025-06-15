@@ -55,7 +55,7 @@ export class PostService {
         .leftJoin("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
         .addSelect(["users.id", "users.email", "users.fullName"])
-        .orderBy("posts.title", "DESC")
+        .orderBy("posts.createdAt", "DESC")
         .getMany();
     } catch (error) {
       throw new HttpException(
@@ -74,7 +74,7 @@ export class PostService {
         .leftJoin("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
         .addSelect(["users.id", "users.email", "users.fullName"])
-        .orderBy("posts.title", "DESC")
+        .orderBy("posts.createdAt", "DESC")
         .getMany();
     } catch (error) {
       throw new HttpException(
