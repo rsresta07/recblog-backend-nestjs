@@ -1,31 +1,21 @@
-import {
-  Body,
-  ClassSerializerInterceptor,
-  Controller,
-  Get,
-  Param,
-  Put,
-  Query,
-  Req,
-  UseGuards,
-  UseInterceptors,
-} from "@nestjs/common";
-import { UserService } from "./user.service";
-import { ApiBearerAuth, ApiBody, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { HasRoles } from "src/core/decorators/role.decorator";
-import { RoleEnum } from "src/utils/enum/role";
+// user.controller.ts
+import { Controller, Get, Param, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "src/auth/guard/jwt-auth.guard";
-import { RolesGuard } from "src/auth/guard/role.guard";
-import { ResponseMessage } from "src/core/decorators/response.decorator";
+import { UserService } from "./user.service";
 
-@ApiTags("User")
 @Controller("/user")
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get("details/:slug")
-  @UseInterceptors(ClassSerializerInterceptor)
   findOne(@Param("slug") slug: string) {
     return this.userService.findOne(slug);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("me")
+  getMe(@Req() req) {
+    // req.user injected by JwtAuthGuard
+    return this.userService.findById(req.user.id);
   }
 }

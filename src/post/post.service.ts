@@ -50,13 +50,35 @@ export class PostService {
   //* Function to display all posts
   async findAll() {
     try {
-      return await this.postRepository
+      const posts = await this.postRepository
         .createQueryBuilder("posts")
-        .leftJoin("posts.users", "users")
+        .leftJoinAndSelect("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
-        .addSelect(["users.id", "users.email", "users.fullName"])
         .orderBy("posts.createdAt", "DESC")
         .getMany();
+
+      return posts.map((post) => ({
+        createdAt: post.createdAt,
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        image: post.image,
+        slug: post.slug,
+        status: post.status,
+        // pick tags explicitly
+        tags: post.tags.map((tag) => ({
+          id: tag.id,
+          title: tag.title,
+          slug: tag.slug,
+          status: tag.status,
+        })),
+        // pick user fields explicitly
+        users: post.users.map((user) => ({
+          id: user.id,
+          fullName: user.fullName,
+          slug: user.username,
+        })),
+      }));
     } catch (error) {
       throw new HttpException(
         `error finding: ${error}`,
@@ -68,14 +90,36 @@ export class PostService {
   //* Function to display active post
   async findActive() {
     try {
-      return await this.postRepository
+      const posts = await this.postRepository
         .createQueryBuilder("posts")
         .where("posts.status = :status", { status: true })
-        .leftJoin("posts.users", "users")
+        .leftJoinAndSelect("posts.users", "users")
         .leftJoinAndSelect("posts.tags", "tag")
-        .addSelect(["users.id", "users.email", "users.fullName"])
         .orderBy("posts.createdAt", "DESC")
         .getMany();
+
+      return posts.map((post) => ({
+        createdAt: post.createdAt,
+        id: post.id,
+        title: post.title,
+        content: post.content,
+        image: post.image,
+        slug: post.slug,
+        status: post.status,
+        // map tags as-is or pick fields explicitly if needed
+        tags: post.tags.map((tag) => ({
+          id: tag.id,
+          title: tag.title,
+          slug: tag.slug,
+          status: tag.status,
+        })),
+        // map users, only id, fullName, and slug (from username)
+        users: post.users.map((user) => ({
+          id: user.id,
+          fullName: user.fullName,
+          slug: user.username,
+        })),
+      }));
     } catch (error) {
       throw new HttpException(
         `error finding: ${error}`,

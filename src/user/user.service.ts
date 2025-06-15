@@ -51,4 +51,11 @@ export class UserService {
       .orderBy("posts.createdAt", "DESC")
       .getOneOrFail();
   }
+
+  async findById(id: string) {
+    return this.userRepo.findOne({
+      where: { id },
+      select: ["id", "username", "fullName", "email", "role", "status"],
+    });
+  }
 }
