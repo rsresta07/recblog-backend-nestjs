@@ -36,8 +36,8 @@ export class Post extends GenericEntity {
 
   // Many-to-Many relation between post and tags
   @ManyToMany(() => Tag, (tag) => tag.posts, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
   })
   @JoinTable({
     name: "post_tag",
@@ -60,8 +60,8 @@ export class Post extends GenericEntity {
   @ManyToOne(() => User, (user) => user.posts, {
     // A post must have a user
     nullable: false,
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
   })
   @JoinColumn({ name: "user_id", referencedColumnName: "id" })
   user: User;

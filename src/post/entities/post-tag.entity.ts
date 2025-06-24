@@ -11,15 +11,15 @@ export class PostTag {
   tagId: string;
 
   @ManyToOne(() => Post, (post) => post.tags, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
   })
   @JoinColumn({ name: "post_id", referencedColumnName: "id" })
   post: Post;
 
   @ManyToOne(() => Tag, (tag) => tag.posts, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
   })
   @JoinColumn({ name: "tag_id", referencedColumnName: "id" })
   tag: Tag;
