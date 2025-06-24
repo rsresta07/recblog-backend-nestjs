@@ -28,13 +28,16 @@ export class PostController {
   constructor(private readonly postService: PostService) {}
 
   //* Create New Post
-  @Post("/create")
+  @Post("/create/:userSlug")
   @ApiBearerAuth()
-  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @HasRoles(RoleEnum.USER)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ResponseMessage(CREATED)
-  async create(@Body() createPostDto: CreatePostDto) {
-    return this.postService.create(createPostDto);
+  async create(
+    @Param("userSlug") userSlug: string,
+    @Body() createPostDto: CreatePostDto
+  ) {
+    return this.postService.create(userSlug, createPostDto);
   }
 
   //* Get all Posts

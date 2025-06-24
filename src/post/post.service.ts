@@ -2,8 +2,8 @@ import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { UpdatePostDto } from "./dto/update-post.dto";
 import { Post } from "./entities/post.entity";
-import { InjectRepository } from "@nestjs/typeorm";
-import { In, Repository } from "typeorm";
+import { InjectRepository, TypeOrmModule } from "@nestjs/typeorm";
+import { In, Repository, TypeORMError } from "typeorm";
 import { User } from "../user/entities/user.entity";
 import { Tag } from "../tags/entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
@@ -20,68 +20,80 @@ export class PostService {
   ) {}
 
   //* Creating a post
-  async create(createPostDto: CreatePostDto) {
+  async create(userSlug: string, createPostDto: CreatePostDto) {
     try {
-      const { ...rest } = createPostDto;
+      const user = await this.userRepository.findOneBy({ username: userSlug });
+      if (!user) {
+        throw new HttpException(
+          `User with slug '${userSlug}' not found`,
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      const { tagIds, description, ...rest } = createPostDto;
       const post = this.postRepository.create({
         ...rest,
-        title: createPostDto.title,
-        content: createPostDto.description,
-        image: createPostDto.image,
-        slug: generateSlug(rest.title),
+        content: description,
+        slug: generateSlug(createPostDto.title),
       });
 
-      post.tags = await this.tagRepository.findBy({
-        id: In(createPostDto.tagIds),
-      });
-      post.users = await this.userRepository.findBy({
-        id: In(createPostDto.userIds),
-      });
+      if (tagIds?.length) {
+        post.tags = await this.tagRepository.findBy({
+          id: In(tagIds),
+        });
+      }
 
-      await this.postRepository.save(post);
+      post.user = user;
+
+      return this.postRepository.save(post);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new HttpException(
-        `error creating: ${error}`,
+        `error creating: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
     }
   }
 
+  private mapPostToResponse(post: Post) {
+    return {
+      createdAt: post.createdAt,
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      image: post.image,
+      slug: post.slug,
+      status: post.status,
+      // pick tags explicitly
+      tags: post.tags.map((tag) => ({
+        id: tag.id,
+        title: tag.title,
+        slug: tag.slug,
+        status: tag.status,
+      })),
+      // pick user fields explicitly
+      user: {
+        id: post.user.id,
+        fullName: post.user.fullName,
+        slug: post.user.username,
+      },
+    };
+  }
+  
   //* Function to display all posts
   async findAll() {
     try {
       const posts = await this.postRepository
         .createQueryBuilder("posts")
-        .leftJoinAndSelect("posts.users", "users")
+        .leftJoinAndSelect("posts.user", "user")
         .leftJoinAndSelect("posts.tags", "tag")
         .orderBy("posts.createdAt", "DESC")
         .getMany();
 
-      return posts.map((post) => ({
-        createdAt: post.createdAt,
-        id: post.id,
-        title: post.title,
-        content: post.content,
-        image: post.image,
-        slug: post.slug,
-        status: post.status,
-        // pick tags explicitly
-        tags: post.tags.map((tag) => ({
-          id: tag.id,
-          title: tag.title,
-          slug: tag.slug,
-          status: tag.status,
-        })),
-        // pick user fields explicitly
-        users: post.users.map((user) => ({
-          id: user.id,
-          fullName: user.fullName,
-          slug: user.username,
-        })),
-      }));
+      return posts.map(this.mapPostToResponse);
     } catch (error) {
       throw new HttpException(
-        `error finding: ${error}`,
+        `error finding: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
     }
@@ -93,36 +105,15 @@ export class PostService {
       const posts = await this.postRepository
         .createQueryBuilder("posts")
         .where("posts.status = :status", { status: true })
-        .leftJoinAndSelect("posts.users", "users")
+        .leftJoinAndSelect("posts.user", "user")
         .leftJoinAndSelect("posts.tags", "tag")
         .orderBy("posts.createdAt", "DESC")
         .getMany();
 
-      return posts.map((post) => ({
-        createdAt: post.createdAt,
-        id: post.id,
-        title: post.title,
-        content: post.content,
-        image: post.image,
-        slug: post.slug,
-        status: post.status,
-        // map tags as-is or pick fields explicitly if needed
-        tags: post.tags.map((tag) => ({
-          id: tag.id,
-          title: tag.title,
-          slug: tag.slug,
-          status: tag.status,
-        })),
-        // map users, only id, fullName, and slug (from username)
-        users: post.users.map((user) => ({
-          id: user.id,
-          fullName: user.fullName,
-          slug: user.username,
-        })),
-      }));
+      return posts.map(this.mapPostToResponse);
     } catch (error) {
       throw new HttpException(
-        `error finding: ${error}`,
+        `error finding: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
     }
@@ -133,13 +124,22 @@ export class PostService {
       return await this.postRepository
         .createQueryBuilder("post")
         .where({ slug })
-        .leftJoin("post.users", "users")
+        .leftJoin("post.user", "user")
         .leftJoinAndSelect("post.tags", "tag")
-        .addSelect(["users.id", "users.email", "users.fullName"])
+        .addSelect(["user.id", "user.email", "user.fullName"])
         .getOneOrFail();
     } catch (error) {
+      if (
+        error instanceof TypeORMError &&
+        error.name === "EntityNotFoundError"
+      ) {
+        throw new HttpException(
+          `Post with slug '${slug}' not found`,
+          HttpStatus.NOT_FOUND
+        );
+      }
       throw new HttpException(
-        `error finding: ${error}`,
+        `error finding: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
     }
@@ -149,12 +149,19 @@ export class PostService {
     return `This action updates a #${id} post`;
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} post`;
+  async remove(id: string): Promise<void> {
+    const result = await this.postRepository.delete(id);
+
+    if (result.affected === 0) {
+      throw new HttpException(
+        `Post with ID '${id}' not found`,
+        HttpStatus.NOT_FOUND
+      );
+    }
   }
 
   // search post
-  async searchPosts(query: string): Promise<Post[]> {
+  async searchPosts(query: string): Promise<any[]> {
     if (!query || typeof query !== "string") {
       throw new HttpException(
         "Missing or invalid query parameter `q`",
@@ -167,8 +174,8 @@ export class PostService {
     try {
       return await this.postRepository.query(
         `
-      SELECT  
-        p.title AS name,
+      SELECT
+        p.title,
         p.content,
         p.slug,
         p.image
@@ -180,7 +187,7 @@ export class PostService {
       );
     } catch (error) {
       throw new HttpException(
-        `Search failed: ${error}`,
+        `Search failed: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
     }
