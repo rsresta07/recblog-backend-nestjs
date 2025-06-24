@@ -67,9 +67,7 @@ export class TagsService {
         .createQueryBuilder("tags")
         .where("tags.status = :status", { status: true })
         .leftJoin("tags.users", "users")
-        // .leftJoinAndSelect("tags.posts", "post")
-        .addSelect(["users.id", "users.email", "users.fullName"])
-        .orderBy("tags.title", "DESC")
+        .orderBy("tags.title", "ASC")
         .getMany();
     } catch (error) {
       throw new HttpException(
