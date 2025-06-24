@@ -33,6 +33,7 @@ export class PostService {
       const { tagIds, description, ...rest } = createPostDto;
       const post = this.postRepository.create({
         ...rest,
+        status: true,
         content: description,
         slug: generateSlug(createPostDto.title),
       });
@@ -79,7 +80,7 @@ export class PostService {
       },
     };
   }
-  
+
   //* Function to display all posts
   async findAll() {
     try {
@@ -126,7 +127,7 @@ export class PostService {
         .where({ slug })
         .leftJoin("post.user", "user")
         .leftJoinAndSelect("post.tags", "tag")
-        .addSelect(["user.id", "user.email", "user.fullName"])
+        .addSelect(["user.id", "user.email", "user.fullName", "user.username"])
         .getOneOrFail();
     } catch (error) {
       if (

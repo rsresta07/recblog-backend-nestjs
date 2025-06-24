@@ -26,9 +26,9 @@ export class CreatePostDto {
   @ApiProperty({ example: "/L029.jpg" })
   image: string;
 
-  @IsBoolean()
-  @ApiProperty({ example: true })
-  status: boolean;
+  // @IsBoolean()
+  // @ApiProperty({ example: true })
+  // status: boolean;
 
   @IsArray()
   @IsUUID("all", { each: true })
@@ -37,12 +37,4 @@ export class CreatePostDto {
     example: ["98eec7cf-8b52-4f02-aac8-d17b886a901a"],
   })
   tagIds: string[];
-
-  @IsArray()
-  @IsUUID("all", { each: true })
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
-  @ApiProperty({
-    example: ["69193f2c-9f02-4502-9560-06262c9303f9"],
-  })
-  userIds: string[];
 }
