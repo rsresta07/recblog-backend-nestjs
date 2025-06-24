@@ -55,10 +55,4 @@ export class User extends GenericEntity {
 
   @OneToMany(() => Post, (post) => post.user)
   posts?: Post[];
-
-  @ManyToMany(() => Tag, (tag) => tag.users, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
-  })
-  tags?: Tag[];
 }

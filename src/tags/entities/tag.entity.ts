@@ -27,26 +27,4 @@ export class Tag {
     onUpdate: "NO ACTION",
   })
   posts?: Post[];
-
-  //   Many-to-Many relation between user and tag
-  @ManyToMany(() => User, (user) => user.posts, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
-  })
-  @JoinTable({
-    name: "tag_user",
-    joinColumns: [
-      {
-        name: "tag_id",
-        referencedColumnName: "id",
-      },
-    ],
-    inverseJoinColumns: [
-      {
-        name: "user_id",
-        referencedColumnName: "id",
-      },
-    ],
-  })
-  users?: User[];
 }

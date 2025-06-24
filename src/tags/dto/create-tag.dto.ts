@@ -7,16 +7,4 @@ export class CreateTagDto {
   @ApiProperty({ example: "Technology" })
   @Transform(({ value }) => value.trim())
   title: string;
-
-  @IsBoolean()
-  @ApiProperty({ example: true })
-  status: boolean;
-
-  @IsArray()
-  @IsUUID("all", { each: true })
-  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
-  @ApiProperty({
-    example: ["69193f2c-9f02-4502-9560-06262c9303f9"],
-  })
-  userIds: string[];
 }
