@@ -3,8 +3,9 @@ import {
   Column,
   Entity,
   ManyToMany,
+  ManyToOne,
   PrimaryGeneratedColumn,
-  JoinTable,
+  JoinTable, JoinColumn,
 } from "typeorm";
 import { Tag } from "../../tags/entities/tag.entity";
 import { User } from "../../user/entities/user.entity";
@@ -55,25 +56,13 @@ export class Post extends GenericEntity {
   })
   tags?: Tag[];
 
-  //   Many-to-Many relation between user and post
-  @ManyToMany(() => User, (user) => user.posts, {
+  //   Many-to-One relation between post and user
+  @ManyToOne(() => User, (user) => user.posts, {
+    // A post must have a user
+    nullable: false,
     onDelete: "NO ACTION",
     onUpdate: "NO ACTION",
   })
-  @JoinTable({
-    name: "post_user",
-    joinColumns: [
-      {
-        name: "post_id",
-        referencedColumnName: "id",
-      },
-    ],
-    inverseJoinColumns: [
-      {
-        name: "user_id",
-        referencedColumnName: "id",
-      },
-    ],
-  })
-  users?: User[];
+  @JoinColumn({ name: "user_id", referencedColumnName: "id" })
+  user: User;
 }

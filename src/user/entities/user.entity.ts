@@ -5,8 +5,9 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  ManyToMany,
   PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToMany,
 } from "typeorm";
 import { Post } from "../../post/entities/post.entity";
 import { Tag } from "../../tags/entities/tag.entity";
@@ -52,10 +53,7 @@ export class User extends GenericEntity {
   @CreateDateColumn()
   last_login_at: Date;
 
-  @ManyToMany(() => Post, (post) => post.users, {
-    onDelete: "NO ACTION",
-    onUpdate: "NO ACTION",
-  })
+  @OneToMany(() => Post, (post) => post.user)
   posts?: Post[];
 
   @ManyToMany(() => Tag, (tag) => tag.users, {
