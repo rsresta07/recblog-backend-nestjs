@@ -138,4 +138,6 @@ dist
 node_modules/
 dist/
 .env
+
+.vscode/settings.json
 .vscode
