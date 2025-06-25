@@ -26,11 +26,8 @@ export class TagsService {
       const newTag = this.tagRepository.create({
         ...rest,
         title: createTagDto.title,
+        status: true,
         slug: generateSlug(rest.title),
-      });
-
-      newTag.users = await this.userRepository.findBy({
-        id: In(createTagDto.userIds),
       });
 
       await this.tagRepository.save(newTag);
@@ -47,10 +44,7 @@ export class TagsService {
     try {
       return await this.tagRepository
         .createQueryBuilder("tags")
-        .leftJoin("tags.users", "users")
-        // .leftJoinAndSelect("tags.posts", "post")
         .orderBy("tags.title", "DESC")
-        .addSelect(["users.id", "users.email", "users.fullName"])
         .getMany();
     } catch (error) {
       throw new HttpException(
@@ -66,7 +60,6 @@ export class TagsService {
       return await this.tagRepository
         .createQueryBuilder("tags")
         .where("tags.status = :status", { status: true })
-        .leftJoin("tags.users", "users")
         .orderBy("tags.title", "ASC")
         .getMany();
     } catch (error) {
@@ -82,9 +75,6 @@ export class TagsService {
       return await this.tagRepository
         .createQueryBuilder("tag")
         .where({ slug })
-        .leftJoin("tag.users", "users")
-        .addSelect(["users.id", "users.email", "users.fullName"])
-        // .leftJoinAndSelect("tag.posts", "post")
         .getOneOrFail();
     } catch (error) {
       throw new HttpException(
@@ -98,7 +88,7 @@ export class TagsService {
     return `This action updates a #${id} tag`;
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} tag`;
+  async remove(id: string) {
+    return await this.tagRepository.delete(id);
   }
 }

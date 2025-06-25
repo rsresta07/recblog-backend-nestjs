@@ -24,6 +24,10 @@ export class UserService {
     }
   }
 
+  async findAll() {
+    return this.userRepo.find();
+  }
+
   async findOne(slug: string) {
     return this.userRepo
       .createQueryBuilder("user")

@@ -140,3 +140,4 @@ dist/
 .env
 
 .vscode/settings.json
+.vscode

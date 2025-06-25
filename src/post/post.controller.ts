@@ -66,7 +66,7 @@ export class PostController {
 
   @Patch(":id")
   @ApiBearerAuth()
-  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   update(@Param("id") id: string, @Body() updatePostDto: UpdatePostDto) {
     return this.postService.update(id, updatePostDto);
@@ -74,7 +74,7 @@ export class PostController {
 
   @Delete(":id")
   @ApiBearerAuth()
-  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   remove(@Param("id") id: string) {
     return this.postService.remove(id);

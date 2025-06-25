@@ -60,7 +60,7 @@ export class TagsController {
     return this.tagsService.findOne(slug);
   }
 
-  @Patch(":id")
+  @Patch("/update/:id")
   @ApiBearerAuth()
   @HasRoles(RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -68,7 +68,7 @@ export class TagsController {
     return this.tagsService.update(id, updateTagDto);
   }
 
-  @Delete(":id")
+  @Delete("/delete/:id")
   @ApiBearerAuth()
   @HasRoles(RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
