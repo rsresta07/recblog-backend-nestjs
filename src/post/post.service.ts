@@ -146,8 +146,56 @@ export class PostService {
     }
   }
 
-  update(id: string, updatePostDto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  async update(id: string, updatePostDto: UpdatePostDto) {
+    try {
+      const post = await this.postRepository.findOne({
+        where: { id },
+        relations: ["tags"], // Load existing tags to manage updates
+      });
+
+      if (!post) {
+        throw new HttpException(
+          `Post with ID '${id}' not found`,
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      // Update basic fields if provided in DTO
+      if (updatePostDto.title !== undefined) {
+        post.title = updatePostDto.title;
+        post.slug = generateSlug(updatePostDto.title); // Re-generate slug if title changes
+      }
+      if (updatePostDto.description !== undefined) {
+        post.content = updatePostDto.description;
+      }
+      if (updatePostDto.image !== undefined) {
+        post.image = updatePostDto.image;
+      }
+
+      // Update tags if provided in DTO
+      if (updatePostDto.tagIds !== undefined) {
+        post.tags =
+          updatePostDto.tagIds.length > 0
+            ? await this.tagRepository.findBy({ id: In(updatePostDto.tagIds) })
+            : [];
+      }
+
+      await this.postRepository.save(post);
+
+      // refetch post with relations
+      const fullPost = await this.postRepository.findOneOrFail({
+        where: { id: post.id },
+        relations: ["user", "tags"],
+      });
+
+      return this.mapPostToResponse(fullPost);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        `Error updating post: ${error.message}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
   }
 
   async remove(id: string): Promise<void> {

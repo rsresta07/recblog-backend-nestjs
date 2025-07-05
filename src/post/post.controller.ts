@@ -64,7 +64,7 @@ export class PostController {
     return this.postService.findOne(slug);
   }
 
-  @Patch(":id")
+  @Patch("/update/:id")
   @ApiBearerAuth()
   @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
