@@ -1,8 +1,8 @@
 {
-  "name": "precise",
+  "name": "RecBlog",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "The package.json file of RecBlog",
+  "author": "chaaku",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

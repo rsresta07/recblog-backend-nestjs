@@ -5,10 +5,14 @@ import {
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
-  JoinTable, JoinColumn,
+  JoinTable,
+  JoinColumn,
+  OneToMany,
 } from "typeorm";
 import { Tag } from "../../tags/entities/tag.entity";
 import { User } from "../../user/entities/user.entity";
+import { PostLike } from "./like.entity";
+import { Comment } from "./comment.entity";
 
 @Entity("posts")
 export class Post extends GenericEntity {
@@ -65,4 +69,8 @@ export class Post extends GenericEntity {
   })
   @JoinColumn({ name: "user_id", referencedColumnName: "id" })
   user: User;
+
+  // relationship with comment and likes
+  @OneToMany(() => PostLike, (l) => l.post) likes: PostLike[];
+  @OneToMany(() => Comment, (c) => c.post) comments: Comment[];
 }

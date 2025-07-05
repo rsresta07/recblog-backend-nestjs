@@ -1,11 +1,11 @@
-import { DocumentBuilder } from '@nestjs/swagger';
+import { DocumentBuilder } from "@nestjs/swagger";
 
 const swaggerConfig = new DocumentBuilder()
-  .setTitle('SolveMCQ API')
+  .setTitle("RecBlog API")
   .setDescription(
-    'API for SolveMCQ project using node(nestjs) as backend language, typeorm as ORM and Postgres as Database.',
+    "API for RecBlog project using node(nestjs) as backend language, typeorm as ORM and Postgres as Database."
   )
-  .setVersion('1.0')
+  .setVersion("1.0")
   .addBearerAuth()
   .build();
 
