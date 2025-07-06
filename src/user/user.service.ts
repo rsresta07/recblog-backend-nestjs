@@ -59,7 +59,31 @@ export class UserService {
   async findById(id: string) {
     return this.userRepo.findOne({
       where: { id },
-      select: ["id", "username", "fullName", "email", "role", "status"],
+      select: [
+        "id",
+        "username",
+        "fullName",
+        "email",
+        "location",
+        "contact",
+        "role",
+        "status",
+      ],
     });
+  }
+
+  async updateMe(id: string, dto) {
+    await this.userRepo.update({ id }, dto);
+    return this.findById(id); // return fresh copy
+  }
+
+  async updateBySlug(slug: string, dto) {
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set(dto)
+      .where("username = :slug", { slug })
+      .execute();
+    return this.findOne(slug);
   }
 }

@@ -54,6 +54,7 @@ export class AuthService {
           role: restPart.role,
           token,
           refreshToken: "",
+          slug: restPart.username,
         };
       }
     } catch (error) {

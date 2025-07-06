@@ -1,19 +1,22 @@
 // user.controller.ts
 import {
+  Body,
   ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
+  Patch,
   Req,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "src/auth/guard/jwt-auth.guard";
 import { UserService } from "./user.service";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { RoleEnum } from "src/utils/enum/role";
 import { HasRoles } from "src/core/decorators/role.decorator";
 import { RolesGuard } from "src/auth/guard/role.guard";
+import { UpdateMeDto } from "./dto/update-me.dto";
 
 @ApiTags("User")
 @Controller("/user")
@@ -39,5 +42,21 @@ export class UserController {
   getMe(@Req() req) {
     // req.user injected by JwtAuthGuard
     return this.userService.findById(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("/me")
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: "Profile updated" })
+  updateMe(@Req() req, @Body() dto: UpdateMeDto) {
+    return this.userService.updateMe(req.user.id, dto);
+  }
+
+  /* — Optional: super‑admin can patch anyone — */
+  @Patch("/details/:slug")
+  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  updateUserBySlug(@Param("slug") slug: string, @Body() dto: UpdateMeDto) {
+    return this.userService.updateBySlug(slug, dto);
   }
 }
