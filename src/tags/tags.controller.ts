@@ -56,6 +56,7 @@ export class TagsController {
   //* Get tag-details
   @Get("/:slug")
   @UseInterceptors(ClassSerializerInterceptor)
+
   findOne(@Param("slug") slug: string) {
     return this.tagsService.findOne(slug);
   }
@@ -64,6 +65,7 @@ export class TagsController {
   @ApiBearerAuth()
   @HasRoles(RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
+
   update(@Param("id") id: string, @Body() updateTagDto: UpdateTagDto) {
     return this.tagsService.update(id, updateTagDto);
   }

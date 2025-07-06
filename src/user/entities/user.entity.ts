@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   OneToMany,
   ManyToMany,
+  JoinTable,
 } from "typeorm";
 import { Post } from "../../post/entities/post.entity";
 import { Tag } from "../../tags/entities/tag.entity";
@@ -55,4 +56,8 @@ export class User extends GenericEntity {
 
   @OneToMany(() => Post, (post) => post.user)
   posts?: Post[];
+
+  @ManyToMany(() => Tag, { eager: true })
+  @JoinTable({ name: "user_tags" }) // join table: user_tags(user_id, tag_id)
+  preferences: Tag[];
 }

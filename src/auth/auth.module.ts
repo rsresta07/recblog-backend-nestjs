@@ -9,9 +9,10 @@ import { JwtService } from "@nestjs/jwt";
 import { JwtStrategy } from "./strategy/jwt.strategy";
 import { LocalStrategy } from "./strategy/local.strategy";
 import { Pagination } from "nestjs-typeorm-paginate";
+import { Tag } from "src/tags/entities/tag.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User, Tag])],
   controllers: [AuthController],
   providers: [
     AuthService,

@@ -2,11 +2,13 @@ import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { Repository } from "typeorm";
+import { Tag } from "src/tags/entities/tag.entity";
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User) private readonly userRepo: Repository<User>
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Tag) private readonly tagRepo: Repository<Tag>
   ) {}
 
   // helper functions
@@ -85,5 +87,21 @@ export class UserService {
       .where("username = :slug", { slug })
       .execute();
     return this.findOne(slug);
+  }
+
+  async getPreferences(id: string) {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      relations: ["preferences"],
+    });
+    return user.preferences;
+  }
+
+  async updatePreferences(id: string, dto) {
+    const tags = await this.tagRepo.findByIds(dto.tagIds); // inject TagRepository
+    const user = await this.userRepo.findOneByOrFail({ id });
+    user.preferences = tags;
+    await this.userRepo.save(user);
+    return user.preferences; // return fresh list
   }
 }

@@ -17,6 +17,7 @@ import { RoleEnum } from "src/utils/enum/role";
 import { HasRoles } from "src/core/decorators/role.decorator";
 import { RolesGuard } from "src/auth/guard/role.guard";
 import { UpdateMeDto } from "./dto/update-me.dto";
+import { UpdatePreferencesDto } from "./dto/update-preferences.dto";
 
 @ApiTags("User")
 @Controller("/user")
@@ -58,5 +59,17 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   updateUserBySlug(@Param("slug") slug: string, @Body() dto: UpdateMeDto) {
     return this.userService.updateBySlug(slug, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("/preferences")
+  getMyPreferences(@Req() req) {
+    return this.userService.getPreferences(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("/preferences")
+  updateMyPreferences(@Req() req, @Body() dto: UpdatePreferencesDto) {
+    return this.userService.updatePreferences(req.user.id, dto);
   }
 }

@@ -20,12 +20,13 @@ import { Post } from "./post/entities/post.entity";
 import { PostLike } from "./post/entities/like.entity";
 import { Follow } from "./user/entities/follow.entity";
 import { Comment } from "./post/entities/comment.entity";
+import { Tag } from "./tags/entities/tag.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forRoot(AppDataSource.options),
 
-    TypeOrmModule.forFeature([Follow, PostLike, Comment, User]),
+    TypeOrmModule.forFeature([Tag, Follow, PostLike, Comment, User]),
     AuthModule,
     UserModule,
     HealthCheckModule,
