@@ -9,6 +9,8 @@ import { RoleEnum, StatusEnum } from "src/utils/enum/role";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/user/entities/user.entity";
 import { DataSource, Repository } from "typeorm";
+import generateSlug from "src/utils/helpers/generateSlug";
+import { create } from "domain";
 
 @Injectable()
 export class AuthService {
@@ -36,11 +38,10 @@ export class AuthService {
         const data = {
           email: email?.trim(),
           password: hashedPassword,
-          username: createUserDto.username?.trim(),
           fullName: createUserDto.fullName?.trim(),
+          username: generateSlug(createUserDto.fullName),
           role: RoleEnum.USER,
-          location: createUserDto.location?.trim(),
-          contact: createUserDto.contact?.trim(),
+          position: createUserDto.position?.trim(),
           // If you want to make the status to be pending when creating an account, remove the status below
           status: StatusEnum.APPROVED,
         };

@@ -16,11 +16,6 @@ export class LoginAuthDto {
 export class RegisterUserDto {
   @IsNotEmpty()
   @IsString()
-  @ApiProperty({ example: "chaaku" })
-  username: string;
-
-  @IsNotEmpty()
-  @IsString()
   @ApiProperty({ example: "Rameshwor Shrestha" })
   fullName: string;
 
@@ -35,16 +30,11 @@ export class RegisterUserDto {
   password: string;
 
   @IsOptional()
-  @IsString()
-  @ApiProperty({ example: "9876543210" })
-  contact: string;
-
-  @IsOptional()
   @ApiProperty({ example: "APPROVED" })
   status: any;
 
   @IsOptional()
   @IsString()
-  @ApiProperty({ example: "koteshwor" })
-  location: string;
+  @ApiProperty({ example: "Doctor" })
+  position: string;
 }

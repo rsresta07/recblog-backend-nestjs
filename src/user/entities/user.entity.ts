@@ -36,11 +36,8 @@ export class User extends GenericEntity {
   @Column()
   password: string;
 
-  @Column({ type: "varchar", name: "location", default: "Kathmandu" })
-  location: string;
-
-  @Column({ type: "varchar", name: "contact", default: "9812345678" })
-  contact: string;
+  @Column({ type: "varchar", name: "position", default: "Kathmandu" })
+  position: string;
 
   @Column({ nullable: true })
   refresh_token: string;

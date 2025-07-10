@@ -127,7 +127,13 @@ export class PostService {
         .where({ slug })
         .leftJoin("post.user", "user")
         .leftJoinAndSelect("post.tags", "tag")
-        .addSelect(["user.id", "user.email", "user.fullName", "user.username"])
+        .addSelect([
+          "user.id",
+          "user.email",
+          "user.fullName",
+          "user.username",
+          "user.position",
+        ])
         .getOneOrFail();
     } catch (error) {
       if (
