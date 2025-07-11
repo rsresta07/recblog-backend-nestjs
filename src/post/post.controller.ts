@@ -60,10 +60,9 @@ export class PostController {
 
   //* Get post-details
   @Get("details/:slug")
-  @UseGuards(JwtAuthGuard)
   @UseInterceptors(ClassSerializerInterceptor)
   async findOne(@Param("slug") slug: string, @Req() req) {
-    const userId = req.user.id;
+    const userId = req.user?.id;
     return this.postService.findOne(slug, userId);
   }
 
