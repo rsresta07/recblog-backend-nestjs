@@ -120,9 +120,9 @@ export class PostService {
     }
   }
 
-  async findOne(slug: string) {
+  async findOne(slug: string, userId?: string) {
     try {
-      return await this.postRepository
+      const post = await this.postRepository
         .createQueryBuilder("post")
         .where({ slug })
         .leftJoin("post.user", "user")
@@ -135,20 +135,37 @@ export class PostService {
           "user.position",
         ])
         .getOneOrFail();
-    } catch (error) {
-      if (
-        error instanceof TypeORMError &&
-        error.name === "EntityNotFoundError"
-      ) {
-        throw new HttpException(
-          `Post with slug '${slug}' not found`,
-          HttpStatus.NOT_FOUND
-        );
+
+      // 🧠 Optional: Update user preferences based on viewed tags
+      if (userId) {
+        await this.updateUserPreferencesOnView(userId, post.tags);
       }
+
+      return post;
+    } catch (error) {
       throw new HttpException(
-        `error finding: ${error.message}`,
+        `Error finding post: ${error.message}`,
         HttpStatus.BAD_REQUEST
       );
+    }
+  }
+
+  private async updateUserPreferencesOnView(userId: string, viewedTags: Tag[]) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return;
+
+    const existingTagIds = user.preferences.map((tag) => tag.id);
+    const newTags = viewedTags.filter(
+      (tag) => !existingTagIds.includes(tag.id)
+    );
+
+    if (newTags.length > 0) {
+      user.preferences = [...user.preferences, ...newTags];
+      await this.userRepository.save(user);
     }
   }
 
@@ -246,5 +263,39 @@ export class PostService {
         HttpStatus.BAD_REQUEST
       );
     }
+  }
+
+  // Cosine Similarity
+  async getRecommendedPostsForUser(userId: string): Promise<any[]> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user || user.preferences.length === 0) {
+      return this.findActive(); // Fallback
+    }
+
+    const tagIds = user.preferences.map((tag) => tag.id);
+
+    const query = this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.tags", "tag")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoin("post_tag", "pt", "pt.post_id = post.id")
+      .where("pt.tag_id IN (:...tagIds)", { tagIds })
+      .andWhere("post.user_id != :userId", { userId })
+      .andWhere("post.status = true")
+      .select(["post", "tag", "user"])
+      .addSelect("COUNT(pt.tag_id)", "match_count")
+      .groupBy("post.id")
+      .addGroupBy("user.id")
+      .addGroupBy("tag.id")
+      .orderBy("match_count", "DESC")
+      .limit(10);
+
+    const results = await query.getMany();
+
+    return results.map(this.mapPostToResponse); // optional formatting
   }
 }

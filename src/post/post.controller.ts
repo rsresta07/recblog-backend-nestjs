@@ -10,6 +10,7 @@ import {
   ClassSerializerInterceptor,
   UseGuards,
   Query,
+  Req,
 } from "@nestjs/common";
 import { PostService } from "./post.service";
 import { CreatePostDto } from "./dto/create-post.dto";
@@ -59,9 +60,11 @@ export class PostController {
 
   //* Get post-details
   @Get("details/:slug")
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(ClassSerializerInterceptor)
-  findOne(@Param("slug") slug: string) {
-    return this.postService.findOne(slug);
+  async findOne(@Param("slug") slug: string, @Req() req) {
+    const userId = req.user.id;
+    return this.postService.findOne(slug, userId);
   }
 
   @Patch("/update/:id")
@@ -84,5 +87,16 @@ export class PostController {
   @Get("/search")
   searchPosts(@Query("q") query: string) {
     return this.postService.searchPosts(query);
+  }
+
+  //* Recommend posts based on user preferences (tags)
+  @Get("/recommendations")
+  @ApiBearerAuth()
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  getRecommendedPosts(@Req() req) {
+    const userId = req.user?.id;
+    return this.postService.getRecommendedPostsForUser(userId);
   }
 }
