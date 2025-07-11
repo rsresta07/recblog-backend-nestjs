@@ -9,10 +9,14 @@ export class UpdateMeDto {
   @IsOptional()
   @IsString()
   @Length(2, 100)
-  location?: string;
+  username?: string;
 
   @IsOptional()
   @IsString()
   @Length(5, 20)
-  contact?: string;
+  position?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
 }
