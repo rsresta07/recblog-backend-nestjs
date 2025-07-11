@@ -151,21 +151,33 @@ export class PostService {
   }
 
   private async updateUserPreferencesOnView(userId: string, viewedTags: Tag[]) {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ["preferences"],
-    });
+    if (viewedTags.length === 0) return;
 
+    // get user (no need for preferences relation)
+    const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) return;
 
-    const existingTagIds = user.preferences.map((tag) => tag.id);
+    // get existing preferences from DB directly
+    const existingPreferences = await this.userRepository
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.preferences", "pref")
+      .where("user.id = :userId", { userId })
+      .getOne();
+
+    const existingTagIds =
+      existingPreferences?.preferences.map((tag) => tag.id) || [];
+
+    // filter tags not already present
     const newTags = viewedTags.filter(
       (tag) => !existingTagIds.includes(tag.id)
     );
 
     if (newTags.length > 0) {
-      user.preferences = [...user.preferences, ...newTags];
-      await this.userRepository.save(user);
+      await this.userRepository
+        .createQueryBuilder()
+        .relation(User, "preferences")
+        .of(user)
+        .add(newTags.map((t) => t.id));
     }
   }
 
@@ -286,11 +298,10 @@ export class PostService {
       .where("pt.tag_id IN (:...tagIds)", { tagIds })
       .andWhere("post.user_id != :userId", { userId })
       .andWhere("post.status = true")
-      .select(["post", "tag", "user"])
+      .select(["post", "user"])
       .addSelect("COUNT(pt.tag_id)", "match_count")
       .groupBy("post.id")
       .addGroupBy("user.id")
-      .addGroupBy("tag.id")
       .orderBy("match_count", "DESC")
       .limit(10);
 

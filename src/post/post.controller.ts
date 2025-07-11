@@ -59,9 +59,20 @@ export class PostController {
   }
 
   //* Get post-details
+  //* Public — no login needed
   @Get("details/:slug")
   @UseInterceptors(ClassSerializerInterceptor)
-  async findOne(@Param("slug") slug: string, @Req() req) {
+  async findOnePublic(@Param("slug") slug: string) {
+    return this.postService.findOne(slug);
+  }
+
+  //* Authenticated — preference tracking
+  @Get("details-auth/:slug")
+  @ApiBearerAuth()
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  async findOneAuth(@Param("slug") slug: string, @Req() req: any) {
     const userId = req.user?.id;
     return this.postService.findOne(slug, userId);
   }
