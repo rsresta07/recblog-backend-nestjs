@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { ForbiddenException, HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { Repository } from "typeorm";
@@ -95,11 +95,29 @@ export class UserService {
     return user.preferences;
   }
 
-  async updatePreferences(id: string, dto) {
-    const tags = await this.tagRepo.findByIds(dto.tagIds); // inject TagRepository
-    const user = await this.userRepo.findOneByOrFail({ id });
-    user.preferences = tags;
+  async updatePreferences(id: string, dto: { tagIds: string[] }) {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      relations: ["preferences"],
+    });
+
+    const currentTagIds = user.preferences.map((tag) => tag.id);
+    const newTagIds = dto.tagIds;
+
+    // Check if newTagIds is a subset of currentTagIds
+    const isSubset = newTagIds.every((id) => currentTagIds.includes(id));
+
+    if (!isSubset) {
+      throw new ForbiddenException(
+        "You can only remove existing preferences, not add new ones."
+      );
+    }
+
+    // Load tags to be kept
+    const tagsToKeep = await this.tagRepo.findByIds(newTagIds);
+    user.preferences = tagsToKeep;
     await this.userRepo.save(user);
-    return user.preferences; // return fresh list
+
+    return user.preferences;
   }
 }
