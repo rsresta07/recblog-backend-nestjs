@@ -305,6 +305,10 @@ export class PostService {
    * @returns a list of posts, sorted by relevance
    */
   async getRecommendedPostsForUser(userId: string): Promise<any[]> {
+    const SIMILARITY_THRESHOLD = parseFloat(
+      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
+    );
+
     const tags = await this.tagRepository.find();
     const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
     const vectorLength = tags.length;
@@ -342,6 +346,7 @@ export class PostService {
         post: pv.post,
         score: this.cosineSimilarity(userVector, pv.vector),
       }))
+      .filter((sp) => sp.score > SIMILARITY_THRESHOLD) //* this is the THRESHOLD for similarity
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
 
@@ -362,6 +367,10 @@ export class PostService {
     const tags = await this.tagRepository.find();
     const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
     const vectorLength = tags.length;
+
+    const SIMILARITY_THRESHOLD = parseFloat(
+      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
+    );
 
     const posts = await this.postRepository.find({
       where: { status: true },
@@ -393,7 +402,10 @@ export class PostService {
     // Filter posts where similarity > 0 (meaning at least one tag match)
     const filteredPosts = postVectors
       .filter((pv) => pv.post.user.id !== userId)
-      .filter((pv) => this.cosineSimilarity(userVector, pv.vector) > 0)
+      .filter(
+        (pv) =>
+          this.cosineSimilarity(userVector, pv.vector) > SIMILARITY_THRESHOLD //* this is the THRESHOLD for similarity
+      )
       .map((pv) => pv.post);
 
     return filteredPosts;
