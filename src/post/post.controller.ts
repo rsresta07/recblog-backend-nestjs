@@ -109,4 +109,15 @@ export class PostController {
     const userId = req.user?.id;
     return this.postService.getRecommendedPostsForUser(userId);
   }
+
+  // New endpoint: raw recommended posts for RecommendBlog
+  @Get("/raw-recommendations")
+  @ApiBearerAuth()
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  getRawRecommendedPosts(@Req() req) {
+    const userId = req.user?.id;
+    return this.postService.getRawRecommendedPostsForUser(userId);
+  }
 }

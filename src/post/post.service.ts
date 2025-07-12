@@ -124,8 +124,8 @@ export class PostService {
     try {
       const post = await this.postRepository
         .createQueryBuilder("post")
-        .where({ slug })
-        .leftJoin("post.user", "user")
+        .where("post.slug = :slug", { slug })
+        .leftJoinAndSelect("post.user", "user")
         .leftJoinAndSelect("post.tags", "tag")
         .addSelect([
           "user.id",
@@ -136,12 +136,11 @@ export class PostService {
         ])
         .getOneOrFail();
 
-      // 🧠 Optional: Update user preferences based on viewed tags
       if (userId) {
         await this.updateUserPreferencesOnView(userId, post.tags);
       }
 
-      return post;
+      return this.mapPostToResponse(post);
     } catch (error) {
       throw new HttpException(
         `Error finding post: ${error.message}`,
@@ -151,33 +150,50 @@ export class PostService {
   }
 
   private async updateUserPreferencesOnView(userId: string, viewedTags: Tag[]) {
-    if (viewedTags.length === 0) return;
-
-    // get user (no need for preferences relation)
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) return;
-
-    // get existing preferences from DB directly
-    const existingPreferences = await this.userRepository
-      .createQueryBuilder("user")
-      .leftJoinAndSelect("user.preferences", "pref")
-      .where("user.id = :userId", { userId })
-      .getOne();
-
-    const existingTagIds =
-      existingPreferences?.preferences.map((tag) => tag.id) || [];
-
-    // filter tags not already present
-    const newTags = viewedTags.filter(
-      (tag) => !existingTagIds.includes(tag.id)
+    console.log(
+      "🟢 Called updateUserPreferencesOnView with tags>>>>>>>>>>>>>>>",
+      viewedTags
     );
 
-    if (newTags.length > 0) {
+    if (!viewedTags?.length) return;
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return;
+
+    const viewedTagIds = viewedTags.map((tag) => tag.id).filter(Boolean);
+
+    // Debugging line
+    console.log("Viewed tag IDs:", viewedTagIds);
+
+    const existingTagIds = user.preferences.map((tag) => tag.id);
+
+    // Find tags that are not already part of user's preferences
+    const newTagIds = viewedTagIds.filter((id) => !existingTagIds.includes(id));
+
+    // Debugging line
+    console.log("New tag IDs to be added:", newTagIds);
+
+    if (newTagIds.length > 0) {
       await this.userRepository
         .createQueryBuilder()
         .relation(User, "preferences")
         .of(user)
-        .add(newTags.map((t) => t.id));
+        .add(newTagIds);
+
+      // Optional: Re-fetch updated user to confirm
+      const updatedUser = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ["preferences"],
+      });
+
+      console.log(
+        "Updated preferences:",
+        updatedUser?.preferences.map((p) => p.id)
+      );
     }
   }
 
@@ -277,36 +293,124 @@ export class PostService {
     }
   }
 
-  // Cosine Similarity
+  /**
+   * Given a user ID, returns a list of up to 10 posts that the user may be
+   * interested in, based on the tags they have liked.
+   *
+   * The posts are scored and sorted by relevance, with the highest-scoring
+   * posts appearing first in the list. The scoring is based on cosine similarity
+   * between the user's preferred tags and the tags on the post.
+   *
+   * @param userId the ID of the user
+   * @returns a list of posts, sorted by relevance
+   */
   async getRecommendedPostsForUser(userId: string): Promise<any[]> {
+    const tags = await this.tagRepository.find();
+    const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
+    const vectorLength = tags.length;
+
+    const posts = await this.postRepository.find({
+      where: { status: true },
+      relations: ["tags", "user"],
+    });
+
+    const postVectors = posts.map((post) => {
+      const vector = Array(vectorLength).fill(0);
+      post.tags.forEach((tag) => {
+        const idx = tagIndexMap.get(tag.id);
+        if (idx !== undefined) vector[idx] = 1;
+      });
+      return { post, vector };
+    });
+
     const user = await this.userRepository.findOne({
       where: { id: userId },
       relations: ["preferences"],
     });
 
-    if (!user || user.preferences.length === 0) {
-      return this.findActive(); // Fallback
-    }
+    if (!user) return [];
 
-    const tagIds = user.preferences.map((tag) => tag.id);
+    const userVector = Array(vectorLength).fill(0);
+    user.preferences.forEach((tag) => {
+      const idx = tagIndexMap.get(tag.id);
+      if (idx !== undefined) userVector[idx] = 1;
+    });
 
-    const query = this.postRepository
-      .createQueryBuilder("post")
-      .leftJoinAndSelect("post.tags", "tag")
-      .leftJoinAndSelect("post.user", "user")
-      .leftJoin("post_tag", "pt", "pt.post_id = post.id")
-      .where("pt.tag_id IN (:...tagIds)", { tagIds })
-      .andWhere("post.user_id != :userId", { userId })
-      .andWhere("post.status = true")
-      .select(["post", "user"])
-      .addSelect("COUNT(pt.tag_id)", "match_count")
-      .groupBy("post.id")
-      .addGroupBy("user.id")
-      .orderBy("match_count", "DESC")
-      .limit(10);
+    const scoredPosts = postVectors
+      .filter((pv) => pv.post.user.id !== userId)
+      .map((pv) => ({
+        post: pv.post,
+        score: this.cosineSimilarity(userVector, pv.vector),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
 
-    const results = await query.getMany();
+    return scoredPosts.map((sp) => this.mapPostToResponse(sp.post));
+  }
 
-    return results.map(this.mapPostToResponse); // optional formatting
+  /**
+   * Given a user ID, returns a list of posts that have at least one tag
+   * in common with the user's preferences.
+   *
+   * The posts are not scored or sorted in any way. This function is used
+   * by getRecommendedPostsForUser to get the raw list of posts and then
+   * score and sort them.
+   * @param userId the ID of the user
+   * @returns a list of posts
+   */
+  async getRawRecommendedPostsForUser(userId: string): Promise<Post[]> {
+    const tags = await this.tagRepository.find();
+    const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
+    const vectorLength = tags.length;
+
+    const posts = await this.postRepository.find({
+      where: { status: true },
+      relations: ["tags", "user"],
+    });
+
+    const postVectors = posts.map((post) => {
+      const vector = Array(vectorLength).fill(0);
+      post.tags.forEach((tag) => {
+        const idx = tagIndexMap.get(tag.id);
+        if (idx !== undefined) vector[idx] = 1;
+      });
+      return { post, vector };
+    });
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return [];
+
+    const userVector = Array(vectorLength).fill(0);
+    user.preferences.forEach((tag) => {
+      const idx = tagIndexMap.get(tag.id);
+      if (idx !== undefined) userVector[idx] = 1;
+    });
+
+    // Filter posts where similarity > 0 (meaning at least one tag match)
+    const filteredPosts = postVectors
+      .filter((pv) => pv.post.user.id !== userId)
+      .filter((pv) => this.cosineSimilarity(userVector, pv.vector) > 0)
+      .map((pv) => pv.post);
+
+    return filteredPosts;
+  }
+
+  /**
+   * Compute the cosine similarity between two vectors.
+   *
+   * @param a first vector
+   * @param b second vector
+   * @returns cosine similarity between the two vectors (value between 0 and 1)
+   */
+  private cosineSimilarity(a: number[], b: number[]): number {
+    const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
+    const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+    const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+    if (normA === 0 || normB === 0) return 0;
+    return dot / (normA * normB);
   }
 }
