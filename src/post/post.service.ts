@@ -293,136 +293,177 @@ export class PostService {
     }
   }
 
-  /**
-   * Given a user ID, returns a list of up to 10 posts that the user may be
-   * interested in, based on the tags they have liked.
-   *
-   * The posts are scored and sorted by relevance, with the highest-scoring
-   * posts appearing first in the list. The scoring is based on cosine similarity
-   * between the user's preferred tags and the tags on the post.
-   *
-   * @param userId the ID of the user
-   * @returns a list of posts, sorted by relevance
-   */
-  async getRecommendedPostsForUser(userId: string): Promise<any[]> {
-    const SIMILARITY_THRESHOLD = parseFloat(
-      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
-    );
-
-    const tags = await this.tagRepository.find();
-    const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
-    const vectorLength = tags.length;
-
-    const posts = await this.postRepository.find({
-      where: { status: true },
-      relations: ["tags", "user"],
-    });
-
-    const postVectors = posts.map((post) => {
-      const vector = Array(vectorLength).fill(0);
-      post.tags.forEach((tag) => {
-        const idx = tagIndexMap.get(tag.id);
-        if (idx !== undefined) vector[idx] = 1;
-      });
-      return { post, vector };
-    });
-
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ["preferences"],
-    });
-
-    if (!user) return [];
-
-    const userVector = Array(vectorLength).fill(0);
-    user.preferences.forEach((tag) => {
-      const idx = tagIndexMap.get(tag.id);
-      if (idx !== undefined) userVector[idx] = 1;
-    });
-
-    const scoredPosts = postVectors
-      .filter((pv) => pv.post.user.id !== userId)
-      .map((pv) => ({
-        post: pv.post,
-        score: this.cosineSimilarity(userVector, pv.vector),
-      }))
-      .filter((sp) => sp.score > SIMILARITY_THRESHOLD) //* this is the THRESHOLD for similarity
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-
-    return scoredPosts.map((sp) => this.mapPostToResponse(sp.post));
-  }
-
-  /**
-   * Given a user ID, returns a list of posts that have at least one tag
-   * in common with the user's preferences.
-   *
-   * The posts are not scored or sorted in any way. This function is used
-   * by getRecommendedPostsForUser to get the raw list of posts and then
-   * score and sort them.
-   * @param userId the ID of the user
-   * @returns a list of posts
-   */
-  async getRawRecommendedPostsForUser(userId: string): Promise<Post[]> {
-    const tags = await this.tagRepository.find();
-    const tagIndexMap = new Map(tags.map((tag, index) => [tag.id, index]));
-    const vectorLength = tags.length;
-
-    const SIMILARITY_THRESHOLD = parseFloat(
-      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
-    );
-
-    const posts = await this.postRepository.find({
-      where: { status: true },
-      relations: ["tags", "user"],
-    });
-
-    const postVectors = posts.map((post) => {
-      const vector = Array(vectorLength).fill(0);
-      post.tags.forEach((tag) => {
-        const idx = tagIndexMap.get(tag.id);
-        if (idx !== undefined) vector[idx] = 1;
-      });
-      return { post, vector };
-    });
-
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ["preferences"],
-    });
-
-    if (!user) return [];
-
-    const userVector = Array(vectorLength).fill(0);
-    user.preferences.forEach((tag) => {
-      const idx = tagIndexMap.get(tag.id);
-      if (idx !== undefined) userVector[idx] = 1;
-    });
-
-    // Filter posts where similarity > 0 (meaning at least one tag match)
-    const filteredPosts = postVectors
-      .filter((pv) => pv.post.user.id !== userId)
-      .filter(
-        (pv) =>
-          this.cosineSimilarity(userVector, pv.vector) > SIMILARITY_THRESHOLD //* this is the THRESHOLD for similarity
-      )
-      .map((pv) => pv.post);
-
-    return filteredPosts;
-  }
-
-  /**
-   * Compute the cosine similarity between two vectors.
-   *
-   * @param a first vector
-   * @param b second vector
-   * @returns cosine similarity between the two vectors (value between 0 and 1)
-   */
   private cosineSimilarity(a: number[], b: number[]): number {
     const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
     const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
     const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
     if (normA === 0 || normB === 0) return 0;
     return dot / (normA * normB);
+  }
+
+  async getRecommendedPostsForUser(userId: string): Promise<any[]> {
+    const SIMILARITY_THRESHOLD = parseFloat(
+      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
+    );
+
+    const tags = await this.tagRepository.find();
+    const tagUsageMap = new Map<string, number>();
+
+    const tagIndexMap = new Map(
+      tags.map((tag, index) => {
+        tagUsageMap.set(tag.id, 0);
+        return [tag.id, index];
+      })
+    );
+
+    const vectorLength = tags.length;
+
+    const posts = await this.postRepository.find({
+      where: { status: true },
+      relations: ["tags", "user"],
+    });
+
+    posts.forEach((post) => {
+      post.tags.forEach((tag) => {
+        tagUsageMap.set(tag.id, (tagUsageMap.get(tag.id) || 0) + 1);
+      });
+    });
+
+    const postVectors = posts.map((post) => {
+      const vector = Array(vectorLength).fill(0);
+      post.tags.forEach((tag) => {
+        const idx = tagIndexMap.get(tag.id);
+        const usage = tagUsageMap.get(tag.id) || 1;
+        if (idx !== undefined) vector[idx] = 1 / Math.log(1 + usage);
+      });
+      return { post, vector };
+    });
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return [];
+
+    const userVector = Array(vectorLength).fill(0);
+    user.preferences.forEach((tag) => {
+      const idx = tagIndexMap.get(tag.id);
+      const usage = tagUsageMap.get(tag.id) || 1;
+      if (idx !== undefined) userVector[idx] = 1 / Math.log(1 + usage);
+    });
+
+    const MIN_RESULTS = parseFloat(
+      process.env.RECOMMENDATION_MIN_RESULTS || "10"
+    );
+
+    let scoredPosts = postVectors
+      .filter((pv) => pv.post.user.id !== userId)
+      .map((pv) => ({
+        post: pv.post,
+        score: this.cosineSimilarity(userVector, pv.vector),
+      }));
+
+    const filtered = scoredPosts.filter(
+      (sp) => sp.score > SIMILARITY_THRESHOLD
+    );
+
+    if (filtered.length >= MIN_RESULTS) {
+      scoredPosts = filtered;
+    } else {
+      scoredPosts = scoredPosts
+        .filter((sp) => sp.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MIN_RESULTS);
+    }
+
+    console.log(
+      "DEBUG scores:",
+      scoredPosts.map((sp) => ({
+        slug: sp.post.slug,
+        score: sp.score,
+      }))
+    );
+
+    return scoredPosts.map((sp) => this.mapPostToResponse(sp.post));
+  }
+
+  async getRawRecommendedPostsForUser(userId: string): Promise<Post[]> {
+    const SIMILARITY_THRESHOLD = parseFloat(
+      process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
+    );
+
+    const tags = await this.tagRepository.find();
+    const tagUsageMap = new Map<string, number>();
+
+    const tagIndexMap = new Map(
+      tags.map((tag, index) => {
+        tagUsageMap.set(tag.id, 0);
+        return [tag.id, index];
+      })
+    );
+
+    const vectorLength = tags.length;
+
+    const posts = await this.postRepository.find({
+      where: { status: true },
+      relations: ["tags", "user"],
+    });
+
+    posts.forEach((post) => {
+      post.tags.forEach((tag) => {
+        tagUsageMap.set(tag.id, (tagUsageMap.get(tag.id) || 0) + 1);
+      });
+    });
+
+    const postVectors = posts.map((post) => {
+      const vector = Array(vectorLength).fill(0);
+      post.tags.forEach((tag) => {
+        const idx = tagIndexMap.get(tag.id);
+        const usage = tagUsageMap.get(tag.id) || 1;
+        if (idx !== undefined) vector[idx] = 1 / Math.log(1 + usage);
+      });
+      return { post, vector };
+    });
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return [];
+
+    const userVector = Array(vectorLength).fill(0);
+    user.preferences.forEach((tag) => {
+      const idx = tagIndexMap.get(tag.id);
+      const usage = tagUsageMap.get(tag.id) || 1;
+      if (idx !== undefined) userVector[idx] = 1 / Math.log(1 + usage);
+    });
+
+    const MIN_RESULTS = parseFloat(
+      process.env.RECOMMENDATION_MIN_RESULTS || "10"
+    );
+
+    let scoredPosts = postVectors
+      .filter((pv) => pv.post.user.id !== userId)
+      .map((pv) => ({
+        post: pv.post,
+        score: this.cosineSimilarity(userVector, pv.vector),
+      }));
+
+    const filtered = scoredPosts.filter(
+      (sp) => sp.score > SIMILARITY_THRESHOLD
+    );
+
+    if (filtered.length >= MIN_RESULTS) {
+      scoredPosts = filtered;
+    } else {
+      scoredPosts = scoredPosts
+        .filter((sp) => sp.score > 0)
+        .sort((a, b) => b.score - a.score)
+        // .slice(0, 10);
+    }
+
+    return scoredPosts.map((sp) => sp.post);
   }
 }
