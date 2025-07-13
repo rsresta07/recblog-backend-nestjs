@@ -15,30 +15,29 @@ There are main three parts in this project Admin _(as this is a personal blog pr
 
 The user authentication is based on roles and the user _(Admin)_ is always called **SUPER_ADMIN**.
 
-### Algorithm
+## Algorithm
 
-#### Content-Based Recommendation
+### Content-Based Recommendation
 
 This system uses **content-based filtering** to recommend blog posts based on user preferences.
 
 Each post and user is represented as a vector of tags. Instead of flat binary values, tag weights are computed using **Inverse Tag Frequency (ITF)**:
 
-\[
-\text{similarity} = \frac{\vec{A} \cdot \vec{B}}{ \|\vec{A}\| \times \|\vec{B}\| }
-\]
+$`` \text{weight} = \dfrac{1}{\log(1 + f)} ``$
 
 This ensures that rarer tags contribute more to the similarity calculation.
 
 To compare user and post vectors, we use **cosine similarity**:
 
-```
+$``\text{similarity} = \dfrac{\vec{A} \cdot \vec{B}}{||\vec{A}|| \times ||\vec{B}||}``$
 
-\[
-\text{similarity} = \frac{\vec{A} \cdot \vec{B}}{ \|\vec{A}\| \times \|\vec{B}\| }
-\]
-```
+Final Formula will look something like this:
+
+$``\text{similarity} = \dfrac{\sum_{i=1}^{n} \left( \dfrac{A_i}{\log(1 + f_i)} \cdot \dfrac{B_i}{\log(1 + f_i)} \right)}{\left\| \dfrac{\vec{A}}{\log(1 + \vec{f})} \right\| \cdot \left\| \dfrac{\vec{B}}{\log(1 + \vec{f})} \right\|}``$
 
 Only posts above a certain threshold are returned as recommendations.
+
+
 
 ## Environment Variables
 
