@@ -15,6 +15,30 @@ There are main three parts in this project Admin _(as this is a personal blog pr
 
 The user authentication is based on roles and the user _(Admin)_ is always called **SUPER_ADMIN**.
 
+### Algorithm
+
+#### Content-Based Recommendation
+
+This system uses **content-based filtering** to recommend blog posts based on user preferences.
+
+Each post and user is represented as a vector of tags. Instead of flat binary values, tag weights are computed using **Inverse Tag Frequency (ITF)**:
+
+\[
+\text{similarity} = \frac{\vec{A} \cdot \vec{B}}{ \|\vec{A}\| \times \|\vec{B}\| }
+\]
+
+This ensures that rarer tags contribute more to the similarity calculation.
+
+To compare user and post vectors, we use **cosine similarity**:
+
+```
+
+\[
+\text{similarity} = \frac{\vec{A} \cdot \vec{B}}{ \|\vec{A}\| \times \|\vec{B}\| }
+\]
+```
+
+Only posts above a certain threshold are returned as recommendations.
 
 ## Environment Variables
 
