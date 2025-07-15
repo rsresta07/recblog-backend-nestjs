@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Put,
   Req,
   UseGuards,
   UseInterceptors,
@@ -46,7 +47,7 @@ export class UserController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Patch("/me")
+  @Put("/me")
   @ApiBearerAuth()
   @ApiOkResponse({ description: "Profile updated" })
   updateMe(@Req() req, @Body() dto: UpdateMeDto) {
