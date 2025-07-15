@@ -7,6 +7,7 @@ import { In, Repository, TypeORMError } from "typeorm";
 import { User } from "../user/entities/user.entity";
 import { Tag } from "../tags/entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
+import { generateUserRatingMatrix, predictSimilarUsers } from "src/utils/algorithms/user-based";
 
 @Injectable()
 export class PostService {
@@ -292,4 +293,6 @@ export class PostService {
       );
     }
   }
+
+
 }

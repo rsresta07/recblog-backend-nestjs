@@ -21,7 +21,7 @@ import { PostLike } from "./post/entities/like.entity";
 import { Follow } from "./user/entities/follow.entity";
 import { Comment } from "./post/entities/comment.entity";
 import { Tag } from "./tags/entities/tag.entity";
-import { RecommendationServiceModule } from "./recommendation-service/recommendation-service.module";
+import { RecommendationServiceModule } from "./recommendation/recommendation.module";
 
 @Module({
   imports: [
