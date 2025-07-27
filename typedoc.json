@@ -1,0 +1,8 @@
+{
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs",
+  "readme": "README.md",
+  "exclude": ["src/pages/**/*", "**/*.test.ts", "**/*.stories.tsx"],
+  "name": "RecBlog"
+}

@@ -10,10 +10,20 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "src/user/entities/user.entity";
 import { DataSource, Repository } from "typeorm";
 import generateSlug from "src/utils/helpers/generateSlug";
-import { create } from "domain";
 
 @Injectable()
 export class AuthService {
+  /**
+   * The constructor for the AuthService class.
+   *
+   * Injects the required dependencies.
+   *
+   * @param userRepo The Repository for User entity.
+   * @param bcryptService The service to hash and compare passwords.
+   * @param userService The service to handle the user operations.
+   * @param jwtService The service to handle the JWT authentication.
+   * @param dataSource The DataSource to interact with the database.
+   */
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     private readonly bcryptService: BcryptService,
@@ -22,6 +32,13 @@ export class AuthService {
     private readonly dataSource: DataSource
   ) {}
 
+  /**
+   * Registers a new user with the provided credentials.
+   * @param createUserDto The Registration User DTO.
+   * @returns The newly created user object with the JWT token.
+   * @throws {HttpException} If the user already exists.
+   * @throws {HttpException} If there is an error creating the user.
+   */
   async createUser(createUserDto: RegisterUserDto) {
     try {
       const userExists = await this.CheckUserExists(createUserDto);
@@ -63,6 +80,14 @@ export class AuthService {
     }
   }
 
+  /**
+   * Logs in the user with the provided credentials.
+   * @param loginAuthDto The Login Auth DTO.
+   * @returns The user object with the JWT token.
+   * @throws {HttpException} If the user is not found.
+   * @throws {HttpException} If the user is not activated.
+   * @throws {HttpException} If the email or password is incorrect.
+   */
   async login(loginAuthDto: LoginAuthDto) {
     try {
       const userData = await this.userService.isAuthenticatedUser(loginAuthDto);
@@ -99,6 +124,14 @@ export class AuthService {
     }
   }
 
+  /**
+   * Validates a user's credentials.
+   *
+   * @param email - The email address of the user.
+   * @param password - The password of the user.
+   * @returns A promise that resolves to the user object if the credentials are valid.
+   * @throws {HttpException} If the credentials are invalid, with a status of UNAUTHORIZED.
+   */
   async validateUser(email: string, password: string) {
     try {
       const user = await this.userService.isAuthenticatedUser({
@@ -118,8 +151,12 @@ export class AuthService {
     }
   }
 
-  // helper functions
-
+  /**
+   * Generates a JWT token for a given user.
+   *
+   * @param user - The user object containing user details.
+   * @returns A promise that resolves to a JWT token as a string.
+   */
   public async generateToken(user: any): Promise<string> {
     return this.jwtService.sign(
       {
@@ -135,6 +172,12 @@ export class AuthService {
     );
   }
 
+  /**
+   * Checks if a user already exists in the repository based on the provided email.
+   *
+   * @param createUserDto - The DTO containing user registration data, including the email.
+   * @returns A promise that resolves to the user object if found, otherwise null.
+   */
   async CheckUserExists(createUserDto) {
     return await this.userRepo.findOne({
       where: {

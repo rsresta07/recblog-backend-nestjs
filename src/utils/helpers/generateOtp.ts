@@ -1,3 +1,9 @@
+/**
+ * Generates a 6-digit OTP by combining the current timestamp in milliseconds
+ * with a random 6-digit number, and then taking the last 6 digits.
+ *
+ * @returns A 6-digit OTP.
+ */
 export const generateOTP = (): number => {
   // Get the current timestamp in milliseconds
   const timestamp = Date.now();

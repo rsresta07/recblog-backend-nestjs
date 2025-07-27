@@ -2,24 +2,31 @@ import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { CreateTagDto } from "./dto/create-tag.dto";
 import { UpdateTagDto } from "./dto/update-tag.dto";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Post } from "../post/entities/post.entity";
 import { In, Repository } from "typeorm";
-import { User } from "../user/entities/user.entity";
 import { Tag } from "./entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
 
 @Injectable()
 export class TagsService {
+  /**
+   * Constructor for TagsService.
+   *
+   * Injects the required dependencies.
+   *
+   * @param tagRepository The Repository for Tag entity.
+   */
   constructor(
-    @InjectRepository(Post)
-    private postRepository: Repository<Post>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
     @InjectRepository(Tag)
     private tagRepository: Repository<Tag>
   ) {}
 
-  //* Creating a Tag
+  /**
+   * Creates a new tag in the database.
+   *
+   * @param createTagDto The data transfer object containing the tag information.
+   * @returns A promise resolving to the newly created tag.
+   * @throws HttpException if an error occurs during the creation process.
+   */
   async create(createTagDto: CreateTagDto) {
     try {
       const { ...rest } = createTagDto;
@@ -39,7 +46,13 @@ export class TagsService {
     }
   }
 
-  //* Function to display all tags
+  /**
+   * Retrieves a list of all tags.
+   *
+   * @returns A promise resolving to an array of all tags,
+   *          with their titles in descending order.
+   * @throws HttpException if an error occurs while fetching tags.
+   */
   async findAll() {
     try {
       return await this.tagRepository
@@ -54,7 +67,13 @@ export class TagsService {
     }
   }
 
-  //* Function to display active tags
+  /**
+   * Retrieves a list of all active tags.
+   *
+   * @returns A promise resolving to an array of active tags,
+   *          with their titles in ascending order.
+   * @throws HttpException if an error occurs while fetching active tags.
+   */
   async findActive() {
     try {
       return await this.tagRepository
@@ -70,6 +89,13 @@ export class TagsService {
     }
   }
 
+  /**
+   * Retrieves the details of a specific tag.
+   *
+   * @param slug The slug identifier of the tag.
+   * @returns A promise resolving to the tag details.
+   * @throws HttpException if the tag cannot be found.
+   */
   async findOne(slug: string) {
     try {
       return await this.tagRepository
@@ -84,10 +110,12 @@ export class TagsService {
     }
   }
 
+  // TODO: update tags
   update(id: string, updateTagDto: UpdateTagDto) {
     return `This action updates a #${id} tag`;
   }
 
+  // TODO: remove tags
   async remove(id: string) {
     return await this.tagRepository.delete(id);
   }

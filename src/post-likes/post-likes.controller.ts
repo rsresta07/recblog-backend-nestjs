@@ -23,16 +23,38 @@ export class PostLikesController {
   constructor(private srv: PostLikesService) {}
 
   @Post(":id/like")
+  /**
+   * Like a post given its ID.
+   *
+   * @param id The ID of the post to like.
+   * @param req The current request object.
+   * @returns A message indicating success.
+   */
   like(@Param("id") id: string, @Req() req) {
     return this.srv.like(req.user.id, id);
   }
 
   @Delete(":id/like")
+  /**
+   * Unlike a post given its ID.
+   *
+   * @param id The ID of the post to unlike.
+   * @param req The current request object.
+   * @returns A message indicating success.
+   */
   unlike(@Param("id") id: string, @Req() req) {
     return this.srv.unlike(req.user.id, id);
   }
 
   @Get(":id/like/status")
+  /**
+   * Checks if the current user has liked a post given its ID.
+   *
+   * @param id The ID of the post to check if the current user has liked.
+   * @param req The current request object.
+   * @returns An object with a single key, `liked`, which is a boolean indicating
+   * if the current user has liked the post.
+   */
   async isLiked(@Param("id") postId: string, @Req() req) {
     const currentUserId = req.user.id;
     const liked = await this.srv.liked(currentUserId, postId);

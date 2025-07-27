@@ -7,10 +7,16 @@ import { In, Repository, TypeORMError } from "typeorm";
 import { User } from "../user/entities/user.entity";
 import { Tag } from "../tags/entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
-import { generateUserRatingMatrix, predictSimilarUsers } from "src/utils/algorithms/user-based";
 
 @Injectable()
 export class PostService {
+  /**
+   * Injects the required repositories.
+   *
+   * @param postRepository The Repository for Post entity.
+   * @param userRepository The Repository for User entity.
+   * @param tagRepository The Repository for Tag entity.
+   */
   constructor(
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
@@ -20,7 +26,15 @@ export class PostService {
     private tagRepository: Repository<Tag>
   ) {}
 
-  //* Creating a post
+  /**
+   ** Creates a new post under the specified user.
+   *
+   * @param userSlug The username of the user to create the post for.
+   * @param createPostDto The data transfer object to create the post from.
+   * @returns The newly created post.
+   * @throws HttpException if the user does not exist or if there is an error creating
+   * the post.
+   */
   async create(userSlug: string, createPostDto: CreatePostDto) {
     try {
       const user = await this.userRepository.findOneBy({ username: userSlug });
@@ -57,6 +71,32 @@ export class PostService {
     }
   }
 
+  /**
+   ** Maps a Post entity to a response object that can be sent back to the client.
+   *
+   * The response object only includes the following fields from the Post entity:
+   * - createdAt
+   * - id
+   * - title
+   * - content
+   * - image
+   * - slug
+   * - status
+   *
+   * The response object also includes the following fields from the related User entity:
+   * - id
+   * - fullName
+   * - slug (username)
+   *
+   * The response object also includes the related Tag entities, mapped to objects with the following fields:
+   * - id
+   * - title
+   * - slug
+   * - status
+   *
+   * @param post The Post entity to map.
+   * @returns The response object.
+   */
   private mapPostToResponse(post: Post) {
     return {
       createdAt: post.createdAt,
@@ -82,7 +122,13 @@ export class PostService {
     };
   }
 
-  //* Function to display all posts
+  /**
+   * Retrieves a list of all posts.
+   *
+   * @returns A promise resolving to an array of all posts,
+   *          with user and tag information included.
+   * @throws HttpException if an error occurs while fetching posts.
+   */
   async findAll() {
     try {
       const posts = await this.postRepository
@@ -101,7 +147,13 @@ export class PostService {
     }
   }
 
-  //* Function to display active post
+  /**
+   * Retrieves a list of all active posts.
+   *
+   * @returns A promise resolving to an array of active posts,
+   *          with user and tag information included.
+   * @throws HttpException if an error occurs while fetching active posts.
+   */
   async findActive() {
     try {
       const posts = await this.postRepository
@@ -121,6 +173,16 @@ export class PostService {
     }
   }
 
+  /**
+   * Retrieves the details of a specific post.
+   *
+   * @param slug The slug identifier of the post.
+   * @param userId The ID of the user viewing the post. If provided, the
+   *               user's tag preferences will be updated to include the tags
+   *               associated with the post.
+   * @returns A promise resolving to the post details.
+   * @throws HttpException if the post cannot be found.
+   */
   async findOne(slug: string, userId?: string) {
     try {
       const post = await this.postRepository
@@ -150,12 +212,18 @@ export class PostService {
     }
   }
 
+  /**
+   * Updates a user's tag preferences based on the tags of a viewed post.
+   *
+   * @param userId - The ID of the user whose preferences are to be updated.
+   * @param viewedTags - An array of Tag objects that the user has viewed.
+   *
+   * This method checks if any of the viewed tags are not currently in the user's
+   * preferences and adds them. If the user or viewed tags are not found, the method
+   * exits early. Debugging lines log the tag IDs being processed and the user's
+   * updated preferences.
+   */
   private async updateUserPreferencesOnView(userId: string, viewedTags: Tag[]) {
-    console.log(
-      "🟢 Called updateUserPreferencesOnView with tags>>>>>>>>>>>>>>>",
-      viewedTags
-    );
-
     if (!viewedTags?.length) return;
 
     const user = await this.userRepository.findOne({
@@ -198,6 +266,14 @@ export class PostService {
     }
   }
 
+  /**
+   * Updates a post.
+   *
+   * @param id The UUID of the post to update.
+   * @param updatePostDto The update data transfer object.
+   * @returns The updated post with user and tag information included.
+   * @throws HttpException if the post does not exist or if there is an error updating the post.
+   */
   async update(id: string, updatePostDto: UpdatePostDto) {
     try {
       const post = await this.postRepository.findOne({
@@ -250,6 +326,12 @@ export class PostService {
     }
   }
 
+  /**
+   * Removes a post.
+   *
+   * @param id The UUID of the post to remove.
+   * @throws HttpException if the post cannot be found.
+   */
   async remove(id: string): Promise<void> {
     const result = await this.postRepository.delete(id);
 
@@ -261,7 +343,13 @@ export class PostService {
     }
   }
 
-  // search post
+  /**
+   * Performs a full-text search on all posts.
+   *
+   * @param query The search query string.
+   * @returns An array of posts with title, content, slug, and image fields.
+   * @throws HttpException if the query parameter is missing or invalid.
+   */
   async searchPosts(query: string): Promise<any[]> {
     if (!query || typeof query !== "string") {
       throw new HttpException(
@@ -269,8 +357,6 @@ export class PostService {
         HttpStatus.BAD_REQUEST
       );
     }
-
-    console.log("Search query:", query);
 
     try {
       return await this.postRepository.query(
@@ -293,6 +379,4 @@ export class PostService {
       );
     }
   }
-
-
 }

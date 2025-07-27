@@ -9,6 +9,15 @@ import swaggerConfig from "./config/swagger.config";
 import { ResponseInterceptor } from "./core/interceptors/response.interceptor";
 import { AppDataSource } from "./config/database.config";
 
+/**
+ * Starts the NestJS application.
+ *
+ * Applies global middleware and interceptors,
+ * sets up the Swagger API documentation,
+ * and starts the server on the given port.
+ *
+ * @returns {Promise<void>}
+ */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 

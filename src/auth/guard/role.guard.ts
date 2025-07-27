@@ -6,6 +6,14 @@ import { RoleEnum } from "src/utils/enum/role";
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
+  /**
+   * CanActivate implementation.
+   *
+   * Checks if the user has the required role, otherwise throws an UnauthorizedException.
+   *
+   * @param context ExecutionContext
+   * @returns boolean
+   */
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<RoleEnum[]>(
       "roles",

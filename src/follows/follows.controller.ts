@@ -23,18 +23,40 @@ export class FollowsController {
   constructor(private srv: FollowsService) {}
 
   @Post("/:id")
+  /**
+   * Follows a user given their ID.
+   *
+   * @param id The UUID of the user to follow.
+   * @param req The current request object.
+   * @returns A message indicating success.
+   */
   async follow(@Param("id") id: string, @Req() req) {
     await this.srv.follow(req.user.id, id);
     return { message: "followed" };
   }
 
   @Delete("/:id")
+  /**
+   * Unfollows a user given their ID.
+   *
+   * @param id The UUID of the user to unfollow.
+   * @param req The current request object.
+   * @returns A message indicating success.
+   */
   async unfollow(@Param("id") id: string, @Req() req) {
     await this.srv.unfollow(req.user.id, id);
     return { message: "unfollowed" };
   }
 
   @Get(":id/status")
+  /**
+   * Checks if the current user is following a given user.
+   *
+   * @param id The UUID of the user to check if the current user is following.
+   * @param req The current request object.
+   * @returns An object with a single key, `following`, which is a boolean indicating
+   * if the current user is following the given user.
+   */
   async isFollowing(@Param("id") targetUserId: string, @Req() req) {
     const currentUserId = req.user.id;
     const following = await this.srv.isFollowing(currentUserId, targetUserId);
