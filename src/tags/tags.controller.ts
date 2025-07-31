@@ -98,12 +98,12 @@ export class TagsController {
     return this.tagsService.update(id, updateTagDto);
   }
 
-  @Delete("/delete/:id")
+  @Patch("/delete/:id")
   @ApiBearerAuth()
   @HasRoles(RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   /**
-   * Removes a tag.
+   * Removes a tag. make tag status false when clicked on delete
    *
    * @param id The UUID of the tag to remove.
    * @returns A promise resolving to nothing.

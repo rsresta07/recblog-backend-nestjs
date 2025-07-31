@@ -18,6 +18,7 @@ import { HasRoles } from "src/core/decorators/role.decorator";
 import { RolesGuard } from "src/auth/guard/role.guard";
 import { UpdateMeDto } from "./dto/update-me.dto";
 import { UpdatePreferencesDto } from "./dto/update-preferences.dto";
+import { UpdateUserByAdminDto } from "./dto/update-user-admin.dto";
 
 @ApiTags("User")
 @Controller("/user")
@@ -110,16 +111,24 @@ export class UserController {
 
   @UseGuards(JwtAuthGuard)
   @Patch("/preferences")
-  /**
-   * Updates the preferences of the authenticated user.
-   *
-   * @param req The current request object. The user ID is extracted from the request,
-   *            which is injected by the JwtAuthGuard.
-   * @param dto The update data transfer object containing the new preferences.
-   * @returns A promise resolving to the updated user preferences.
-   * @throws ForbiddenException if new preferences include tags not currently in the user's preferences.
-   */
   updateMyPreferences(@Req() req, @Body() dto: UpdatePreferencesDto) {
     return this.userService.updatePreferences(req.user.id, dto);
+  }
+
+  @Patch("/update-by-admin/:slug")
+  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  AdminUpdateUser(
+    @Param("slug") slug: string,
+    @Body() dto: UpdateUserByAdminDto
+  ) {
+    return this.userService.AdminUpdateUser(slug, dto);
+  }
+
+  @Patch("/status-by-admin/:slug")
+  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  AdminToggleStatus(@Param("slug") slug: string) {
+    return this.userService.AdminToggleStatus(slug);
   }
 }

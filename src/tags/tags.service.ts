@@ -110,13 +110,49 @@ export class TagsService {
     }
   }
 
-  // TODO: update tags
-  update(id: string, updateTagDto: UpdateTagDto) {
-    return `This action updates a #${id} tag`;
+  /**
+   * Updates a tag.
+   *
+   * @param id The UUID of the tag to update.
+   * @param updateTagDto The update data transfer object.
+   * @returns A promise resolving to the updated tag.
+   * @throws HttpException if the update fails.
+   */
+  async update(id: string, updateTagDto: UpdateTagDto) {
+    try {
+      const tag = await this.tagRepository.findOneByOrFail({ id });
+
+      if (updateTagDto.title) {
+        tag.title = updateTagDto.title;
+        tag.slug = generateSlug(updateTagDto.title);
+      }
+
+      return await this.tagRepository.save(tag);
+    } catch (error) {
+      throw new HttpException(
+        `Error updating tag: ${error}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
   }
 
-  // TODO: remove tags
+  /**
+   * Toggles the status of a tag.
+   *
+   * @param id The UUID of the tag to remove.
+   * @returns A promise resolving to nothing.
+   * @throws HttpException if the tag cannot be found.
+   */
   async remove(id: string) {
-    return await this.tagRepository.delete(id);
+    try {
+      const tag = await this.tagRepository.findOneByOrFail({ id });
+      tag.status = !tag.status;
+      return await this.tagRepository.save(tag);
+    } catch (error) {
+      throw new HttpException(
+        `Error toggling tag status: ${error}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
   }
 }

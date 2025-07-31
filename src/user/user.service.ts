@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { Repository } from "typeorm";
 import { Tag } from "src/tags/entities/tag.entity";
+import { StatusEnum } from "../utils/enum/role";
 
 @Injectable()
 export class UserService {
@@ -203,5 +204,45 @@ export class UserService {
     await this.userRepo.save(user);
 
     return user.preferences;
+  }
+
+  async AdminUpdateUser(slug: string, dto) {
+    if ("password" in dto) delete dto.password;
+
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set(dto)
+      .where("username = :slug", { slug })
+      .execute();
+
+    // Use updated username if available, else fallback to old one
+    const newSlug = dto.username ?? slug;
+
+    return this.userRepo.findOneOrFail({
+      where: { username: newSlug },
+    });
+  }
+
+  async AdminToggleStatus(slug: string) {
+    const user = await this.userRepo.findOne({
+      where: { username: slug },
+      select: ["id", "username", "status"],
+    });
+
+    if (!user) throw new Error("User not found");
+
+    const newStatus =
+      user.status === StatusEnum.APPROVED
+        ? StatusEnum.SUSPENDED
+        : StatusEnum.APPROVED;
+
+    await this.userRepo.update({ id: user.id }, { status: newStatus });
+
+    return {
+      message: `User status updated to ${newStatus}`,
+      username: user.username,
+      status: newStatus,
+    };
   }
 }

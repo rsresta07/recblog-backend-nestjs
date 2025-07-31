@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, Param } from "@nestjs/common";
 import { CreatePostDto } from "./dto/create-post.dto";
 import { UpdatePostDto } from "./dto/update-post.dto";
 import { Post } from "./entities/post.entity";
@@ -212,6 +212,24 @@ export class PostService {
     }
   }
 
+  async getPostById(id: string) {
+    try {
+      const post = await this.postRepository.findOne({
+        where: { id },
+        relations: ["user", "tags"],
+      });
+      if (!post) {
+        throw new HttpException("Post not found", HttpStatus.NOT_FOUND);
+      }
+      return this.mapPostToResponse(post);
+    } catch (error) {
+      throw new HttpException(
+        `Error finding post: ${error.message}`,
+        HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
   /**
    * Updates a user's tag preferences based on the tags of a viewed post.
    *
@@ -326,19 +344,65 @@ export class PostService {
     }
   }
 
-  /**
-   * Removes a post.
-   *
-   * @param id The UUID of the post to remove.
-   * @throws HttpException if the post cannot be found.
-   */
   async remove(id: string): Promise<void> {
-    const result = await this.postRepository.delete(id);
+    const post = await this.postRepository.findOne({ where: { id } });
 
-    if (result.affected === 0) {
+    if (!post) {
       throw new HttpException(
         `Post with ID '${id}' not found`,
         HttpStatus.NOT_FOUND
+      );
+    }
+    post.status = !post.status; // toggle boolean status
+
+    await this.postRepository.save(post);
+  }
+
+  async adminUpdate(id: string, updatePostDto: UpdatePostDto) {
+    try {
+      const post = await this.postRepository.findOne({
+        where: { id },
+        relations: ["tags", "user"],
+      });
+
+      if (!post) {
+        throw new HttpException(
+          `Post with ID '${id}' not found`,
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      // Update fields same as user update
+      if (updatePostDto.title !== undefined) {
+        post.title = updatePostDto.title;
+        post.slug = generateSlug(updatePostDto.title);
+      }
+      if (updatePostDto.description !== undefined) {
+        post.content = updatePostDto.description;
+      }
+      if (updatePostDto.image !== undefined) {
+        post.image = updatePostDto.image;
+      }
+      if (updatePostDto.tagIds !== undefined) {
+        post.tags =
+          updatePostDto.tagIds.length > 0
+            ? await this.tagRepository.findBy({ id: In(updatePostDto.tagIds) })
+            : [];
+      }
+
+      await this.postRepository.save(post);
+
+      const fullPost = await this.postRepository.findOneOrFail({
+        where: { id: post.id },
+        relations: ["user", "tags"],
+      });
+
+      return this.mapPostToResponse(fullPost);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException(
+        `Error updating post by admin: ${error.message}`,
+        HttpStatus.BAD_REQUEST
       );
     }
   }

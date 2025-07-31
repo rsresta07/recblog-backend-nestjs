@@ -19,7 +19,7 @@ export class Tag {
   @Column({ type: "varchar", name: "slug", default: "temp-slug" })
   slug: string;
 
-  @Column({ type: "varchar", length: 255, name: "status" })
+  @Column({ type: "boolean", name: "status", default: true })
   status: boolean;
 
   @ManyToMany(() => Post, (post) => post.tags, {

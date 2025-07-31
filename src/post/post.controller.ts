@@ -130,7 +130,7 @@ export class PostController {
     return this.postService.update(id, updatePostDto);
   }
 
-  @Delete(":id")
+  @Patch("/delete/:id")
   @ApiBearerAuth()
   @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -143,6 +143,21 @@ export class PostController {
    */
   remove(@Param("id") id: string) {
     return this.postService.remove(id);
+  }
+
+  @Get("/admin-get-post/:id")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  async getPostById(@Param("id") id: string) {
+    return this.postService.getPostById(id);
+  }
+
+  @Patch("/admin-update/:id")
+  @ApiBearerAuth()
+  @HasRoles(RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  adminUpdate(@Param("id") id: string, @Body() updatePostDto: UpdatePostDto) {
+    return this.postService.adminUpdate(id, updatePostDto);
   }
 
   // Search post
