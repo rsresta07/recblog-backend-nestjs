@@ -153,7 +153,7 @@ export class RecommendationService {
     });
 
     const MIN_RESULTS = parseFloat(
-      process.env.RECOMMENDATION_MIN_RESULTS || "10"
+      process.env.RECOMMENDATION_MIN_RESULTS || "100"
     );
 
     let scoredPosts = postVectors
@@ -250,7 +250,7 @@ export class RecommendationService {
     });
 
     const MIN_RESULTS = parseFloat(
-      process.env.RECOMMENDATION_MIN_RESULTS || "10"
+      process.env.RECOMMENDATION_MIN_RESULTS || "100"
     );
 
     let scoredPosts = postVectors
@@ -454,7 +454,7 @@ export class RecommendationService {
     );
     const MIN_RESULTS =
       options?.minResults ||
-      parseFloat(process.env.RECOMMENDATION_MIN_RESULTS || "10");
+      parseFloat(process.env.RECOMMENDATION_MIN_RESULTS || "100");
 
     const [tags, posts, user, users, postLikes, comments] = await Promise.all([
       this.tagRepository.find(),
@@ -477,7 +477,6 @@ export class RecommendationService {
 
     if (!user) return [];
 
-    // Setup tag vector info
     const tagUsageMap = new Map<string, number>();
     const tagIndexMap = new Map(
       tags.map((tag, index) => {
@@ -510,7 +509,6 @@ export class RecommendationService {
       return { post, vector };
     });
 
-    // Tag-based scores
     const tagScores = new Map<string, number>();
     postVectors.forEach(({ post, vector }) => {
       if (post.user.id !== userId) {
@@ -521,7 +519,6 @@ export class RecommendationService {
       }
     });
 
-    // User-based scores
     const ratingMatrix = generateUserRatingMatrix(users, posts);
     const similarUsers = predictSimilarUsers(userId, ratingMatrix);
     const userBasedScores = new Map<string, number>();
@@ -531,7 +528,6 @@ export class RecommendationService {
       }
     });
 
-    // Self interaction scores
     const interactionMatrix = generateUserPostInteractionMatrix(
       users,
       posts,
@@ -544,7 +540,6 @@ export class RecommendationService {
       interactionScores.set(postId, score);
     });
 
-    // Collaborative interaction scores
     const collabScores = new Map<string, number>();
     const similarUsersByInteraction = predictSimilarUsersByInteractions(
       userId,
@@ -561,7 +556,6 @@ export class RecommendationService {
       }
     }
 
-    // 🔢 Combine all scores
     const WEIGHTS = {
       tag: 0.4,
       userBased: 0.2,
@@ -595,11 +589,58 @@ export class RecommendationService {
       }
     }
 
+    // Sort and dedupe
     combinedScores.sort((a, b) => b.score - a.score);
 
-    return combinedScores
-      .slice(0, MIN_RESULTS)
-      .map(({ post }) => this.mapPostToResponse(post));
+    const seen = new Set<string>();
+    const deduped: { post: Post; score: number }[] = [];
+
+    // First, add all similarity-based recommendations
+    const similarityPosts = Array.from(tagScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([postId, score]) => ({
+        post: posts.find((p) => p.id === postId)!,
+        score,
+      }))
+      .filter((item) => item.post);
+
+    // Add all similarity posts first
+    for (const item of similarityPosts) {
+      if (!seen.has(item.post.id)) {
+        seen.add(item.post.id);
+        deduped.push(item);
+      }
+    }
+
+    // Then add other recommendations that aren't already included
+    for (const entry of combinedScores) {
+      if (!seen.has(entry.post.id)) {
+        seen.add(entry.post.id);
+        deduped.push(entry);
+      }
+    }
+
+    // Fallback fill: use high-scoring posts if needed
+    if (deduped.length < MIN_RESULTS) {
+      const remainingPosts = posts
+        .filter((post) => post.user.id !== userId && !seen.has(post.id))
+        .map((post) => ({
+          post,
+          score: 0, // These are fallback posts with minimum score
+        }))
+        .sort(
+          (a, b) =>
+            (b.post.createdAt?.getTime() || 0) -
+            (a.post.createdAt?.getTime() || 0)
+        );
+
+      for (const fb of remainingPosts) {
+        if (deduped.length >= MIN_RESULTS) break;
+        deduped.push(fb);
+      }
+    }
+
+    return deduped.map(({ post }) => this.mapPostToResponse(post));
   }
 }
 
