@@ -10,13 +10,6 @@ import generateSlug from "../utils/helpers/generateSlug";
 
 @Injectable()
 export class PostService {
-  /**
-   * Injects the required repositories.
-   *
-   * @param postRepository The Repository for Post entity.
-   * @param userRepository The Repository for User entity.
-   * @param tagRepository The Repository for Tag entity.
-   */
   constructor(
     @InjectRepository(Post)
     private postRepository: Repository<Post>,
@@ -26,15 +19,6 @@ export class PostService {
     private tagRepository: Repository<Tag>
   ) {}
 
-  /**
-   ** Creates a new post under the specified user.
-   *
-   * @param userSlug The username of the user to create the post for.
-   * @param createPostDto The data transfer object to create the post from.
-   * @returns The newly created post.
-   * @throws HttpException if the user does not exist or if there is an error creating
-   * the post.
-   */
   async create(userSlug: string, createPostDto: CreatePostDto) {
     try {
       const user = await this.userRepository.findOneBy({ username: userSlug });
@@ -71,33 +55,7 @@ export class PostService {
     }
   }
 
-  /**
-   ** Maps a Post entity to a response object that can be sent back to the client.
-   *
-   * The response object only includes the following fields from the Post entity:
-   * - createdAt
-   * - id
-   * - title
-   * - content
-   * - image
-   * - slug
-   * - status
-   *
-   * The response object also includes the following fields from the related User entity:
-   * - id
-   * - fullName
-   * - slug (username)
-   *
-   * The response object also includes the related Tag entities, mapped to objects with the following fields:
-   * - id
-   * - title
-   * - slug
-   * - status
-   *
-   * @param post The Post entity to map.
-   * @returns The response object.
-   */
-  private mapPostToResponse(post: Post) {
+  private mapPostToResponse(post: Post & { likes?: any[]; comments?: any[] }) {
     return {
       createdAt: post.createdAt,
       id: post.id,
@@ -106,14 +64,16 @@ export class PostService {
       image: post.image,
       slug: post.slug,
       status: post.status,
-      // pick tags explicitly
-      tags: post.tags.map((tag) => ({
-        id: tag.id,
-        title: tag.title,
-        slug: tag.slug,
-        status: tag.status,
-      })),
-      // pick user fields explicitly
+      viewCount: post.viewCount || 0,
+      likeCount: post.likes?.length || 0,
+      commentCount: post.comments?.length || 0,
+      tags:
+        post.tags?.map((tag) => ({
+          id: tag.id,
+          title: tag.title,
+          slug: tag.slug,
+          status: tag.status,
+        })) || [],
       user: {
         id: post.user.id,
         fullName: post.user.fullName,
@@ -122,21 +82,13 @@ export class PostService {
     };
   }
 
-  /**
-   * Retrieves a list of all posts.
-   *
-   * @returns A promise resolving to an array of all posts,
-   *          with user and tag information included.
-   * @throws HttpException if an error occurs while fetching posts.
-   */
   async findAll() {
     try {
-      const posts = await this.postRepository
-        .createQueryBuilder("posts")
-        .leftJoinAndSelect("posts.user", "user")
-        .leftJoinAndSelect("posts.tags", "tag")
-        .orderBy("posts.createdAt", "DESC")
-        .getMany();
+      const posts = await this.postRepository.find({
+        where: { status: true },
+        relations: ["user", "tags", "likes", "comments"],
+        order: { createdAt: "DESC" },
+      });
 
       return posts.map(this.mapPostToResponse);
     } catch (error) {
@@ -147,22 +99,13 @@ export class PostService {
     }
   }
 
-  /**
-   * Retrieves a list of all active posts.
-   *
-   * @returns A promise resolving to an array of active posts,
-   *          with user and tag information included.
-   * @throws HttpException if an error occurs while fetching active posts.
-   */
   async findActive() {
     try {
-      const posts = await this.postRepository
-        .createQueryBuilder("posts")
-        .where("posts.status = :status", { status: true })
-        .leftJoinAndSelect("posts.user", "user")
-        .leftJoinAndSelect("posts.tags", "tag")
-        .orderBy("posts.createdAt", "DESC")
-        .getMany();
+      const posts = await this.postRepository.find({
+        where: { status: true },
+        relations: ["user", "tags", "likes", "comments"],
+        order: { createdAt: "DESC" },
+      });
 
       return posts.map(this.mapPostToResponse);
     } catch (error) {
@@ -185,19 +128,14 @@ export class PostService {
    */
   async findOne(slug: string, userId?: string) {
     try {
-      const post = await this.postRepository
-        .createQueryBuilder("post")
-        .where("post.slug = :slug", { slug })
-        .leftJoinAndSelect("post.user", "user")
-        .leftJoinAndSelect("post.tags", "tag")
-        .addSelect([
-          "user.id",
-          "user.email",
-          "user.fullName",
-          "user.username",
-          "user.position",
-        ])
-        .getOneOrFail();
+      const post = await this.postRepository.findOneOrFail({
+        where: { slug },
+        relations: ["user", "tags", "likes", "comments"], // 👈
+      });
+
+      // Increment view count
+      post.viewCount = (post.viewCount || 0) + 1;
+      await this.postRepository.save(post);
 
       if (userId) {
         await this.updateUserPreferencesOnView(userId, post.tags);

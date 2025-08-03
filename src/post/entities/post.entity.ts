@@ -38,6 +38,9 @@ export class Post extends GenericEntity {
   @Column({ type: "tsvector", nullable: true })
   search_vector: string;
 
+  @Column({ type: "int", default: 0 })
+  viewCount: number;
+
   // Many-to-Many relation between post and tags
   @ManyToMany(() => Tag, (tag) => tag.posts, {
     onDelete: "CASCADE",

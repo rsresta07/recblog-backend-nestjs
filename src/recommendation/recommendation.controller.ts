@@ -2,6 +2,8 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  NotFoundException,
+  Param,
   Req,
   UseGuards,
   UseInterceptors,
@@ -69,5 +71,31 @@ export class RecommendationServiceController {
   getFinalRecommendations(@Req() req) {
     const userId = req.user?.id;
     return this.recommendationService.getFinalRecommendations(userId);
+  }
+
+  @Get("/post-context-recommendations/:postId")
+  @ApiBearerAuth()
+  @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(ClassSerializerInterceptor)
+  async getPostContextRecommendations(
+    @Param("postId") postId: string,
+    @Req() req
+  ) {
+    const userId = req.user?.id;
+
+    const post = await this.recommendationService["postRepository"].findOne({
+      where: { id: postId },
+      relations: ["tags"],
+    });
+
+    if (!post) throw new NotFoundException("Post not found");
+
+    const tagIds = post.tags.map((t) => t.id);
+    return this.recommendationService.getRecommendationsBasedOnCurrentPostTags(
+      userId,
+      tagIds,
+      postId
+    );
   }
 }
