@@ -31,33 +31,7 @@ export class RecommendationService {
     private tagRepository: Repository<Tag>
   ) {}
 
-  /**
-   * Maps a Post entity to a response object that can be sent back to the client.
-   *
-   * The response object only includes the following fields from the Post entity:
-   * - createdAt
-   * - id
-   * - title
-   * - content
-   * - image
-   * - slug
-   * - status
-   *
-   * The response object also includes the following fields from the related User entity:
-   * - id
-   * - fullName
-   * - slug (username)
-   *
-   * The response object also includes the related Tag entities, mapped to objects with the following fields:
-   * - id
-   * - title
-   * - slug
-   * - status
-   *
-   * @param post The Post entity to map.
-   * @returns The response object.
-   */
-  private mapPostToResponse(post: Post) {
+  private mapPostToResponse(post: Post & { likes?: any[]; comments?: any[] }) {
     return {
       createdAt: post.createdAt,
       id: post.id,
@@ -66,14 +40,15 @@ export class RecommendationService {
       image: post.image,
       slug: post.slug,
       status: post.status,
-      // pick tags explicitly
+      viewCount: post.viewCount || 0,
+      likeCount: post.likes?.length || 0,
+      commentCount: post.comments?.length || 0,
       tags: post.tags.map((tag) => ({
         id: tag.id,
         title: tag.title,
         slug: tag.slug,
         status: tag.status,
       })),
-      // pick user fields explicitly
       user: {
         id: post.user.id,
         fullName: post.user.fullName,
@@ -82,24 +57,6 @@ export class RecommendationService {
     };
   }
 
-  /**
-   * Generates a list of recommended posts for the given user ID.
-   *
-   * This method first fetches all tags and their usage counts. Then it fetches
-   * all posts that are active and have a user attached. It maps each post to a
-   * vector of tag usage frequencies, and maps each user to a vector of their
-   * preferred tag frequencies. It then calculates the cosine similarity between
-   * the user vector and each post vector, and filters the results to only include
-   * posts with a similarity score above the SIMILARITY_THRESHOLD environment
-   * variable (defaults to 0.33). If the filtered list has less than the
-   * MIN_RESULTS environment variable (defaults to 10) items, it fills the rest
-   * with posts that have a non-zero similarity score, sorted by score in
-   * descending order. It then maps each post to a response object and returns
-   * the list of response objects.
-   *
-   * @param userId The ID of the user to generate recommendations for.
-   * @returns A list of response objects, each representing a post.
-   */
   async getRecommendedPostsForUser(userId: string): Promise<any[]> {
     const SIMILARITY_THRESHOLD = parseFloat(
       process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
@@ -119,7 +76,7 @@ export class RecommendationService {
 
     const posts = await this.postRepository.find({
       where: { status: true },
-      relations: ["tags", "user"],
+      relations: ["tags", "user", "likes", "comments"],
     });
 
     posts.forEach((post) => {
@@ -293,9 +250,10 @@ export class RecommendationService {
     const users = await this.userRepository.find({
       relations: ["preferences"],
     });
+
     const posts = await this.postRepository.find({
       where: { status: true },
-      relations: ["tags", "user"],
+      relations: ["tags", "user", "likes", "comments"],
     });
 
     const matrix = generateUserRatingMatrix(users, posts);
@@ -307,49 +265,6 @@ export class RecommendationService {
 
     return recommendedPosts.map((post) => this.mapPostToResponse(post));
   }
-
-  // async getInteractionBasedRecommendations(userId: string): Promise<any[]> {
-  //   const [users, posts, postLikes, comments] = await Promise.all([
-  //     this.userRepository.find(),
-  //     this.postRepository.find({
-  //       where: { status: true },
-  //       relations: ["tags", "user"],
-  //     }),
-  //     this.postRepository.manager.find(PostLike, {
-  //       relations: ["user", "post"],
-  //     }),
-  //     this.postRepository.manager.find(Comment, {
-  //       relations: ["user", "post"],
-  //     }),
-  //   ]);
-
-  //   const interactionMatrix = generateUserPostInteractionMatrix(
-  //     users,
-  //     posts,
-  //     postLikes,
-  //     comments
-  //   );
-
-  //   const targetVector = interactionMatrix[userId];
-  //   if (!targetVector) return [];
-
-  //   // Build user-post vectors
-  //   const scoredPosts = posts
-  //     .filter((post) => post.user.id !== userId)
-  //     .map((post) => {
-  //       let score = 0;
-  //       for (const [postId, weight] of Object.entries(targetVector)) {
-  //         if (post.id === postId) {
-  //           score += weight;
-  //         }
-  //       }
-  //       return { post, score };
-  //     })
-  //     .filter((sp) => sp.score > 0)
-  //     .sort((a, b) => b.score - a.score);
-
-  //   return scoredPosts.map((sp) => this.mapPostToResponse(sp.post));
-  // }
 
   /**
    * Generates a list of posts that are recommended to a user based on the posts
@@ -374,9 +289,9 @@ export class RecommendationService {
   ): Promise<any[]> {
     const [users, posts, likes, comments] = await Promise.all([
       this.userRepository.find(),
-      this.postRepository.find({
+      await this.postRepository.find({
         where: { status: true },
-        relations: ["tags", "user"],
+        relations: ["tags", "user", "likes", "comments"],
       }),
       this.postRepository.manager.find(PostLike, {
         relations: ["user", "post"],
@@ -458,9 +373,9 @@ export class RecommendationService {
 
     const [tags, posts, user, users, postLikes, comments] = await Promise.all([
       this.tagRepository.find(),
-      this.postRepository.find({
+      await this.postRepository.find({
         where: { status: true },
-        relations: ["tags", "user"],
+        relations: ["tags", "user", "likes", "comments"],
       }),
       this.userRepository.findOne({
         where: { id: userId },
