@@ -557,6 +557,105 @@ export class RecommendationService {
 
     return deduped.map(({ post }) => this.mapPostToResponse(post));
   }
+
+  async getRecommendationsBasedOnCurrentPostTags(
+    userId: string,
+    postTagIds: string[],
+    currentPostId: string
+  ): Promise<any[]> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ["preferences"],
+    });
+
+    if (!user) return [];
+
+    const userPreferredTagIds = new Set(user.preferences.map((tag) => tag.id));
+    const matchedTagIds = postTagIds.filter((tagId) =>
+      userPreferredTagIds.has(tagId)
+    );
+
+    if (!matchedTagIds.length) return [];
+
+    // Query 1: Posts matching user-preferred tags
+    const tagMatchedPosts = await this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.tags", "tag")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoinAndSelect("post.likes", "likes")
+      .leftJoinAndSelect("post.comments", "comments")
+      .where("post.status = :status", { status: true })
+      .andWhere("user.id != :userId", { userId })
+      .andWhere(
+        `post.id IN (
+        SELECT pt.post_id
+        FROM post_tag pt
+        WHERE pt.tag_id IN (:...matchedTagIds)
+      )`,
+        { matchedTagIds }
+      )
+      .andWhere("post.id != :currentPostId", { currentPostId })
+      .orderBy("post.createdAt", "DESC")
+      .limit(10)
+      .getMany();
+
+    const mappedTagPosts = tagMatchedPosts.map((post) =>
+      this.mapPostToResponse(post)
+    );
+
+    if (mappedTagPosts.length >= 10) return mappedTagPosts;
+
+    const remainingCount = 10 - mappedTagPosts.length;
+
+    // Query 2: Fallback posts excluding matched + current
+    const fallbackPosts = await this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.tags", "tag")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoinAndSelect("post.likes", "likes")
+      .leftJoinAndSelect("post.comments", "comments")
+      .where("post.status = :status", { status: true })
+      .andWhere("user.id != :userId", { userId })
+      .andWhere("post.id != :currentPostId", { currentPostId })
+      .andWhere("post.id NOT IN (:...existingIds)", {
+        existingIds: tagMatchedPosts.map((p) => p.id),
+      })
+      .orderBy("post.createdAt", "DESC")
+      .limit(remainingCount)
+      .getMany();
+
+    const mappedFallback = fallbackPosts.map((post) =>
+      this.mapPostToResponse(post)
+    );
+
+    console.log("Fallback posts:", mappedFallback.length);
+
+    const totalSoFar = mappedTagPosts.length + mappedFallback.length;
+
+    if (totalSoFar >= 10) return [...mappedTagPosts, ...mappedFallback];
+
+    const extraPosts = await this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.tags", "tag")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoinAndSelect("post.likes", "likes")
+      .leftJoinAndSelect("post.comments", "comments")
+      .where("post.status = :status", { status: true })
+      .andWhere("post.id != :currentPostId", { currentPostId })
+      .andWhere("post.id NOT IN (:...excludedIds)", {
+        excludedIds: [
+          ...tagMatchedPosts.map((p) => p.id),
+          ...fallbackPosts.map((p) => p.id),
+        ],
+      })
+      .orderBy("post.createdAt", "DESC")
+      .limit(10 - totalSoFar)
+      .getMany();
+
+    const mappedExtra = extraPosts.map((post) => this.mapPostToResponse(post));
+
+    return [...mappedTagPosts, ...mappedFallback, ...mappedExtra];
+  }
 }
 
 /**
