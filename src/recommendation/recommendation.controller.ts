@@ -14,11 +14,15 @@ import { HasRoles } from "src/core/decorators/role.decorator";
 import { RoleEnum } from "src/utils/enum/role";
 import { JwtAuthGuard } from "src/auth/guard/jwt-auth.guard";
 import { RolesGuard } from "src/auth/guard/role.guard";
+import { RecommendationEvaluatorService } from "./recommendation-evaluator.service";
 
 @ApiTags("Recommendation Service")
 @Controller("/recommendation-service")
 export class RecommendationServiceController {
-  constructor(private readonly recommendationService: RecommendationService) {}
+  constructor(
+    private readonly recommendationService: RecommendationService,
+    private readonly evaluator: RecommendationEvaluatorService
+  ) {}
 
   //* Recommend posts based on user preferences (tags)
   @Get("/recommendations")
@@ -97,5 +101,10 @@ export class RecommendationServiceController {
       tagIds,
       postId
     );
+  }
+
+  @Get("/evaluate")
+  async evaluateRecommendations() {
+    return this.evaluator.evaluate({ ks: [5, 10, 20], minInteractions: 1 });
   }
 }
