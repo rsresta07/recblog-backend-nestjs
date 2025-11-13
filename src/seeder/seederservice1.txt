@@ -1,0 +1,111 @@
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { User } from "src/user/entities/user.entity";
+import { Post } from "src/post/entities/post.entity";
+import { Tag } from "src/tags/entities/tag.entity";
+import { PostLike } from "src/post/entities/like.entity";
+import { Comment } from "src/post/entities/comment.entity";
+import { BcryptService } from "src/auth/bcryptjs/bcrypt.service";
+import { RoleEnum, StatusEnum } from "src/utils/enum/role";
+
+@Injectable()
+export class SeederService {
+  constructor(
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Post) private readonly postRepo: Repository<Post>,
+    @InjectRepository(Tag) private readonly tagRepo: Repository<Tag>,
+    @InjectRepository(PostLike) private readonly likeRepo: Repository<PostLike>,
+    @InjectRepository(Comment)
+    private readonly commentRepo: Repository<Comment>,
+    private readonly bcryptService: BcryptService
+  ) {}
+
+  async run() {
+    await this.seedTags();
+    const users = await this.seedUsers();
+    const posts = await this.seedPosts(users);
+    await this.seedInteractions(users, posts);
+  }
+
+  private async seedTags() {
+    const count = await this.tagRepo.count();
+    if (count > 0) return;
+
+    const tagTitles = ["Tech", "Health", "Travel", "Food", "Science"];
+    const tags = this.tagRepo.create(
+      tagTitles.map((title) => ({ title, slug: title.toLowerCase() }))
+    );
+    await this.tagRepo.save(tags);
+  }
+
+  private async seedUsers(): Promise<User[]> {
+    const count = await this.userRepo.count();
+    if (count > 0) return this.userRepo.find({ relations: ["preferences"] });
+
+    const tags = await this.tagRepo.find();
+    const usersData = Array.from({ length: 10 }).map((_, i) => ({
+      fullName: `User ${i + 1}`,
+      email: `user${i + 1}@example.com`,
+      username: `user${i + 1}`,
+      password: "@Password123",
+      role: RoleEnum.USER,
+      status: StatusEnum.APPROVED,
+      preferences: [tags[i % tags.length]],
+    }));
+
+    for (const u of usersData) {
+      u.password = await this.bcryptService.hashPassword(u.password);
+    }
+
+    return this.userRepo.save(this.userRepo.create(usersData));
+  }
+
+  private async seedPosts(users: User[]): Promise<Post[]> {
+    const count = await this.postRepo.count();
+    if (count > 0) return this.postRepo.find({ relations: ["tags", "user"] });
+
+    const tags = await this.tagRepo.find();
+    const postsData = Array.from({ length: 20 }).map((_, i) => ({
+      title: `Post ${i + 1}`,
+      content: `Content for post ${i + 1}`,
+      slug: `post-${i + 1}`,
+      image: `image${i + 1}.jpg`,
+      status: true,
+      user: users[i % users.length],
+      tags: [tags[i % tags.length]],
+    }));
+
+    return this.postRepo.save(this.postRepo.create(postsData));
+  }
+
+  private async seedInteractions(users: User[], posts: Post[]) {
+    const likeCount = await this.likeRepo.count();
+    if (likeCount === 0) {
+      const likes = [];
+      for (const user of users) {
+        for (const post of posts.filter((_, i) => i % 2 === 0)) {
+          likes.push(this.likeRepo.create({ user, post }));
+        }
+      }
+      await this.likeRepo.save(likes);
+    }
+
+    const commentCount = await this.commentRepo.count();
+    if (commentCount === 0) {
+      const comments = [];
+      for (const user of users) {
+        for (const post of posts.filter((_, i) => i % 3 === 0)) {
+          comments.push(
+            this.commentRepo.create({
+              user,
+              post,
+              content: `Comment by ${user.username} on ${post.title}`,
+            })
+          );
+        }
+      }
+      await this.commentRepo.save(comments);
+    }
+  }
+}
