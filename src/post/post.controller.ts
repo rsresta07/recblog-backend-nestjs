@@ -54,29 +54,19 @@ export class PostController {
   @HasRoles(RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(ClassSerializerInterceptor)
-  /**
-   * Retrieves a list of all posts.
-   *
-   * @returns A promise resolving to an array of all posts,
-   *          with user and tag information included.
-   * @throws HttpException if an error occurs while fetching posts.
-   */
-  findAll() {
-    return this.postService.findAll();
+  findAll(@Query("page") page = 1, @Query("limit") limit = 10) {
+    return this.postService.findAll(Number(page), Number(limit));
   }
 
   //* Get active post
   @Get("/active")
   @UseInterceptors(ClassSerializerInterceptor)
-  /**
-   * Retrieves a list of all active posts.
-   *
-   * @returns A promise resolving to an array of active posts,
-   *          with user and tag information included.
-   * @throws HttpException if an error occurs while fetching active posts.
-   */
-  findActive() {
-    return this.postService.findActive();
+  findActive(
+    @Query("page") page = 1,
+    @Query("limit") limit = 10,
+    @Query("search") search = ""
+  ) {
+    return this.postService.findActive(Number(page), Number(limit), search);
   }
 
   //* Get post-details

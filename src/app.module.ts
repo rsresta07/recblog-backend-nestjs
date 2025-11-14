@@ -48,6 +48,6 @@ export class AppModule implements OnModuleInit {
   constructor(private readonly seederService: SeederService) {}
 
   async onModuleInit() {
-    await this.seederService.run();
+    // await this.seederService.run();
   }
 }

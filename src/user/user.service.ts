@@ -80,6 +80,7 @@ export class UserService {
       .leftJoin("posts.tags", "tags")
       .addSelect(["tags.id", "tags.title"])
       .where("user.username = :username", { username: slug })
+      .take(20)
       .orderBy("posts.createdAt", "DESC")
       .getOneOrFail();
   }

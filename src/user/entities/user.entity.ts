@@ -54,7 +54,7 @@ export class User extends GenericEntity {
   @OneToMany(() => Post, (post) => post.user)
   posts?: Post[];
 
-  @ManyToMany(() => Tag, { eager: true })
+  @ManyToMany(() => Tag, {})
   @JoinTable({ name: "user_tags" }) // join table: user_tags(user_id, tag_id)
   preferences: Tag[];
 }

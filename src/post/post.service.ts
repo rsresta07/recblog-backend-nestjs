@@ -3,7 +3,7 @@ import { CreatePostDto } from "./dto/create-post.dto";
 import { UpdatePostDto } from "./dto/update-post.dto";
 import { Post } from "./entities/post.entity";
 import { InjectRepository, TypeOrmModule } from "@nestjs/typeorm";
-import { In, Repository, TypeORMError } from "typeorm";
+import { ILike, In, Repository, TypeORMError } from "typeorm";
 import { User } from "../user/entities/user.entity";
 import { Tag } from "../tags/entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
@@ -82,38 +82,94 @@ export class PostService {
     };
   }
 
-  async findAll() {
-    try {
-      const posts = await this.postRepository.find({
-        where: { status: true },
-        relations: ["user", "tags", "likes", "comments"],
-        order: { createdAt: "DESC" },
-      });
+  async findAll(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
 
-      return posts.map(this.mapPostToResponse);
-    } catch (error) {
-      throw new HttpException(
-        `error finding: ${error.message}`,
-        HttpStatus.BAD_REQUEST
-      );
-    }
+    // Get posts with counts in a single query
+    const query = this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoinAndSelect("post.tags", "tags")
+      .loadRelationCountAndMap("post.likeCount", "post.likes")
+      .loadRelationCountAndMap("post.commentCount", "post.comments")
+      .orderBy("post.createdAt", "DESC")
+      .skip(skip)
+      .take(limit);
+
+    const [posts, total] = await query.getManyAndCount();
+
+    return {
+      data: posts.map(this.mapPostToResponseOptimized),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
-  async findActive() {
-    try {
-      const posts = await this.postRepository.find({
-        where: { status: true },
-        relations: ["user", "tags", "likes", "comments"],
-        order: { createdAt: "DESC" },
-      });
+  async findByUser(userId: string, page = 1, limit = 10) {
+    const [posts, total] = await this.postRepository.findAndCount({
+      where: { user: { id: userId } },
+      relations: ["tags", "likes", "comments"],
+      order: { createdAt: "DESC" },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
-      return posts.map(this.mapPostToResponse);
-    } catch (error) {
-      throw new HttpException(
-        `error finding: ${error.message}`,
-        HttpStatus.BAD_REQUEST
-      );
+    return {
+      data: posts.map(this.mapPostToResponse),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  async findActive(page = 1, limit = 10, search = "") {
+    const skip = (page - 1) * limit;
+
+    const query = this.postRepository
+      .createQueryBuilder("post")
+      .leftJoinAndSelect("post.user", "user")
+      .leftJoinAndSelect("post.tags", "tags")
+      .loadRelationCountAndMap("post.likeCount", "post.likes")
+      .loadRelationCountAndMap("post.commentCount", "post.comments")
+      .where("post.status = :status", { status: true })
+      .orderBy("post.createdAt", "DESC")
+      .skip(skip)
+      .take(limit);
+
+    if (search) {
+      query.andWhere("post.title ILIKE :search", { search: `%${search}%` });
     }
+
+    const [posts, total] = await query.getManyAndCount();
+
+    return {
+      data: posts.map(this.mapPostToResponseOptimized),
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  private mapPostToResponseOptimized(post: any) {
+    return {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      image: post.image,
+      slug: post.slug,
+      status: post.status,
+      createdAt: post.createdAt,
+      viewCount: post.viewCount || 0,
+      likeCount: post.likeCount || 0,
+      commentCount: post.commentCount || 0,
+      tags:
+        post.tags?.map((tag) => ({
+          id: tag.id,
+          title: tag.title,
+          slug: tag.slug,
+          status: tag.status,
+        })) || [],
+      user: {
+        id: post.user?.id,
+        fullName: post.user?.fullName,
+        slug: post.user?.slug,
+      },
+    };
   }
 
   /**
