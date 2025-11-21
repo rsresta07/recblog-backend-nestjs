@@ -9,19 +9,6 @@ interface RatingMatrix {
   [userId: string]: number[];
 }
 
-/**
- * Generate a user rating matrix from given users and posts.
- *
- * @remarks
- * This function generates a matrix of user ratings for each tag, where
- * the user's preferences are used to generate the rating values.
- *
- * @param users The users to generate the matrix for.
- * @param posts The posts to generate the matrix for.
- *
- * @returns A rating matrix, where each key is a user ID and the value is an array
- * of ratings (1 or 0) for each tag in the posts.
- */
 export function generateUserRatingMatrix(
   users: User[],
   posts: Post[]
@@ -48,15 +35,6 @@ export function generateUserRatingMatrix(
   return matrix;
 }
 
-/**
- * Predict similar users to a given target user ID.
- *
- * @param targetUserId The ID of the target user to find similar users for.
- * @param matrix The rating matrix to use for similarity prediction.
- * @param threshold The cosine similarity threshold to filter predicted users by.
- *
- * @returns An array of user IDs that are similar to the target user based on the given matrix and threshold.
- */
 export function predictSimilarUsers(
   targetUserId: string,
   matrix: RatingMatrix,
@@ -80,24 +58,7 @@ export function predictSimilarUsers(
   );
 }
 
-/**
- * Generate a user-post interaction matrix.
- *
- * @remarks
- * This function constructs a matrix where each user ID is mapped to an object
- * that contains post IDs and their interaction scores. The interaction score
- * is calculated based on the number of likes and comments a user has on a given
- * post. Likes and comments are assigned different weights, with likes being
- * weighted more heavily.
- *
- * @param users - The list of users to generate the matrix for.
- * @param posts - The list of posts to include in the matrix.
- * @param postLikes - The list of likes on posts, used to calculate interaction scores.
- * @param comments - The list of comments on posts, used to calculate interaction scores.
- *
- * @returns A matrix where each key is a user ID and the value is an object
- * mapping post IDs to interaction scores.
- */
+
 export function generateUserPostInteractionMatrix(
   users: User[],
   posts: Post[],

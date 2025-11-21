@@ -58,31 +58,33 @@ export class UserService {
    * @throws {HttpException} If the user cannot be found.
    */
   async findOne(slug: string) {
-    return this.userRepo
-      .createQueryBuilder("user")
-      .select([
-        "user.id",
-        "user.email",
-        "user.username",
-        "user.fullName",
-        "user.position",
-        "user.role",
-        "user.status",
-      ])
-      .leftJoin("user.posts", "posts")
-      .addSelect([
-        "posts.id",
-        "posts.title",
-        "posts.image",
-        "posts.slug",
-        "posts.status",
-      ])
-      .leftJoin("posts.tags", "tags")
-      .addSelect(["tags.id", "tags.title"])
-      .where("user.username = :username", { username: slug })
-      .take(20)
-      .orderBy("posts.createdAt", "DESC")
-      .getOneOrFail();
+    return (
+      this.userRepo
+        .createQueryBuilder("user")
+        .select([
+          "user.id",
+          "user.email",
+          "user.username",
+          "user.fullName",
+          "user.position",
+          "user.role",
+          "user.status",
+        ])
+        .leftJoin("user.posts", "posts")
+        .addSelect([
+          "posts.id",
+          "posts.title",
+          "posts.image",
+          "posts.slug",
+          "posts.status",
+        ])
+        .leftJoin("posts.tags", "tags")
+        .addSelect(["tags.id", "tags.title"])
+        .where("user.username = :username", { username: slug })
+        .take(20)
+        // .orderBy("posts.created_at", "DESC")
+        .getOneOrFail()
+    );
   }
 
   /**

@@ -4,6 +4,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  Query,
   Req,
   UseGuards,
   UseInterceptors,
@@ -72,9 +73,16 @@ export class RecommendationServiceController {
   @HasRoles(RoleEnum.USER, RoleEnum.SUPER_ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(ClassSerializerInterceptor)
-  getFinalRecommendations(@Req() req) {
+  getFinalRecommendations(
+    @Req() req,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
+  ) {
     const userId = req.user?.id;
-    return this.recommendationService.getFinalRecommendations(userId);
+    return this.recommendationService.getFinalRecommendations(userId, {
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
   }
 
   @Get("/post-context-recommendations/:postId")

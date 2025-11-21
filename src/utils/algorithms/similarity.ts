@@ -7,14 +7,32 @@
  *          Returns 0 if either vector has a magnitude of zero.
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
-  // Compute dot product of vectors a and b
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  // Compute the dot product of vectors a and b
+  let dotProduct = 0;
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+  }
 
-  // Compute the Euclidean norm (magnitude) of vector a and b
-  const normA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-  const normB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  // Compute the squared sum of vector a
+  let sumSquaresA = 0;
+  for (let i = 0; i < a.length; i++) {
+    sumSquaresA += a[i] * a[i];
+  }
+  const normA = Math.sqrt(sumSquaresA);
 
-  if (normA === 0 || normB === 0) return 0;
-  // Return cosine similarity: dot product divided by product of magnitudes
-  return dotProduct / (normA * normB);
+  // Compute the squared sum of vector b
+  let sumSquaresB = 0;
+  for (let i = 0; i < b.length; i++) {
+    sumSquaresB += b[i] * b[i];
+  }
+  const normB = Math.sqrt(sumSquaresB);
+
+  // Handle the zero vector case
+  if (normA === 0 || normB === 0) {
+    return 0;
+  }
+
+  // Step 5: Compute and return cosine similarity
+  const cosineSim = dotProduct / (normA * normB);
+  return cosineSim;
 }

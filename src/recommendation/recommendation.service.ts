@@ -338,31 +338,9 @@ export class RecommendationService {
     return scoredPosts.map(({ post }) => this.mapPostToResponse(post!));
   }
 
-  /**
-   * Retrieves a list of recommended posts for the given user ID.
-   *
-   * This method uses a combination of tag-based, user-based, and interaction-based
-   * scores to rank posts. The scores are combined using a weighted sum, and the
-   * top-scoring posts are returned.
-   *
-   * The scoring weights are as follows:
-   * - Tag-based score: 0.4
-   * - User-based score: 0.2
-   * - Interaction score: 0.2
-   * - Collaborative interaction score: 0.2
-   *
-   * The method also takes an optional `minResults` parameter, which specifies the
-   * minimum number of results to return. If there are fewer than `minResults`
-   * posts with non-zero scores, the method will return all of them.
-   *
-   * @param userId The ID of the user to generate recommendations for.
-   * @param options An options object with a single property, `minResults`, which
-   * specifies the minimum number of results to return.
-   * @returns A list of recommended posts, sorted by score in descending order.
-   */
   async getFinalRecommendations(
     userId: string,
-    options?: { minResults?: number }
+    options?: { minResults?: number; page?: number; limit?: number }
   ) {
     const SIMILARITY_THRESHOLD = parseFloat(
       process.env.RECOMMENDATION_SIMILARITY_THRESHOLD || "0.33"
@@ -370,6 +348,11 @@ export class RecommendationService {
     const MIN_RESULTS =
       options?.minResults ||
       parseFloat(process.env.RECOMMENDATION_MIN_RESULTS || "100");
+
+    // Pagination parameters
+    const page = options?.page || 1;
+    const limit = options?.limit || 20;
+    const skip = (page - 1) * limit;
 
     const [tags, posts, user, users, postLikes, comments] = await Promise.all([
       this.tagRepository.find(),
@@ -390,7 +373,7 @@ export class RecommendationService {
       }),
     ]);
 
-    if (!user) return [];
+    if (!user) return { data: [], total: 0, page, limit, totalPages: 0 };
 
     const tagUsageMap = new Map<string, number>();
     const tagIndexMap = new Map(
@@ -555,7 +538,57 @@ export class RecommendationService {
       }
     }
 
-    return deduped.map(({ post }) => this.mapPostToResponse(post));
+    // Apply pagination
+    const total = deduped.length;
+    const totalPages = Math.ceil(total / limit);
+    const paginatedResults = deduped.slice(skip, skip + limit);
+
+    // Cosine Similarity (only accepted matches)
+    postVectors.forEach(({ post, vector }) => {
+      if (post.user.id !== userId) {
+        const score = cosineSimilarity(userVector, vector);
+        if (score > SIMILARITY_THRESHOLD) {
+          console.log("COSINE_SIM", score);
+          tagScores.set(post.id, score);
+        }
+      }
+    });
+
+    // User-based CF (only accepted matches)
+    posts.forEach((post) => {
+      const flag =
+        post.user.id !== userId && similarUsers.includes(post.user.id) ? 1 : 0;
+      if (flag === 1) {
+        console.log("USER_BASED_CF", 1);
+        userBasedScores.set(post.id, 1);
+      }
+    });
+
+    console.log(
+      "CB_TAG_SCORES_RAW",
+      Array.from(tagScores.entries()).map(([postId, score]) => ({
+        postId,
+        score,
+      }))
+    );
+
+    console.log("CF_RATING_MATRIX", ratingMatrix);
+
+    console.log(
+      "CF_USER_BASED_SCORES_RAW",
+      Array.from(userBasedScores.entries()).map(([postId, score]) => ({
+        postId,
+        score,
+      }))
+    );
+
+    return {
+      data: paginatedResults.map(({ post }) => this.mapPostToResponse(post)),
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   async getRecommendationsBasedOnCurrentPostTags(

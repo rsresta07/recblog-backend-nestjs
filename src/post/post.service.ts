@@ -122,25 +122,71 @@ export class PostService {
   async findActive(page = 1, limit = 10, search = "") {
     const skip = (page - 1) * limit;
 
-    const query = this.postRepository
+    const baseQb = this.postRepository
       .createQueryBuilder("post")
       .leftJoinAndSelect("post.user", "user")
       .leftJoinAndSelect("post.tags", "tags")
-      .loadRelationCountAndMap("post.likeCount", "post.likes")
-      .loadRelationCountAndMap("post.commentCount", "post.comments")
-      .where("post.status = :status", { status: true })
-      .orderBy("post.createdAt", "DESC")
-      .skip(skip)
-      .take(limit);
+      .where("post.status = :status", { status: true });
 
     if (search) {
-      query.andWhere("post.title ILIKE :search", { search: `%${search}%` });
+      baseQb.andWhere("post.title ILIKE :search", { search: `%${search}%` });
     }
 
-    const [posts, total] = await query.getManyAndCount();
+    baseQb.orderBy("post.createdAt", "DESC").skip(skip).take(limit);
+
+    // fetch entities and total
+    const [posts, total] = await baseQb.getManyAndCount();
+
+    if (posts.length === 0) {
+      return {
+        data: [],
+        meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      };
+    }
+
+    const postIds = posts.map((p) => p.id);
+
+    // single query to get like counts per post_id
+    const likeCountsRaw = await this.postRepository
+      .createQueryBuilder()
+      .select("pl.post_id", "postId")
+      .addSelect("COUNT(pl.post_id)", "count")
+      .from("post_likes", "pl")
+      .where("pl.post_id IN (:...ids)", { ids: postIds })
+      .groupBy("pl.post_id")
+      .getRawMany();
+
+    // single query to get comment counts per post_id
+    const commentCountsRaw = await this.postRepository
+      .createQueryBuilder()
+      .select("c.post_id", "postId")
+      .addSelect("COUNT(c.post_id)", "count")
+      .from("comments", "c")
+      .where("c.post_id IN (:...ids)", { ids: postIds })
+      .groupBy("c.post_id")
+      .getRawMany();
+
+    // map counts by post id
+    const likeCountMap = likeCountsRaw.reduce((acc, r) => {
+      acc[r.postId] = Number(r.count);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const commentCountMap = commentCountsRaw.reduce((acc, r) => {
+      acc[r.postId] = Number(r.count);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const result = posts.map((p) => {
+      return this.mapPostToResponseOptimized({
+        ...p,
+        likeCount: likeCountMap[p.id] || 0,
+        commentCount: commentCountMap[p.id] || 0,
+      });
+    });
 
     return {
-      data: posts.map(this.mapPostToResponseOptimized),
+      data: result,
       meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
     };
   }
