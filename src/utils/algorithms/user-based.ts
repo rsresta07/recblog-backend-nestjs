@@ -1,37 +1,29 @@
-import { User } from "src/user/entities/user.entity";
-import { Post } from "src/post/entities/post.entity";
 import { cosineSimilarity } from "./similarity";
-import { PostLike } from "src/post/entities/like.entity";
-import { Comment } from "src/post/entities/comment.entity";
 
-// Define structure for the user rating matrix, each user maps to a numeric vector
 interface RatingMatrix {
   [userId: string]: number[];
 }
 
+// Notice the `?` added to preferences, tags, user, and post to make TS happy
 export function generateUserRatingMatrix(
-  users: User[],
-  posts: Post[]
+  users: { id: string; preferences?: { id: string }[] }[],
+  posts: { id: string; tags?: { id: string }[] }[]
 ): RatingMatrix {
-  // Extract all unique tag IDs from the posts
+  // Use (p.tags || []) to safely fallback if undefined
   const tagIds = Array.from(
-    new Set(posts.flatMap((p) => p.tags.map((tag) => tag.id)))
+    new Set(posts.flatMap((p) => (p.tags || []).map((t) => t.id)))
   );
-
-  const tagIndexMap = new Map(tagIds.map((id, i) => [id, i])); // Map each tag ID to its index in the final rating vector
-
+  const tagIndexMap = new Map(tagIds.map((id, i) => [id, i]));
   const matrix: RatingMatrix = {};
 
   for (const user of users) {
-    const vector = Array(tagIds.length).fill(0); // Start with a zero-filled vector of tag length
+    const vector = Array(tagIds.length).fill(0);
     for (const tag of user.preferences || []) {
-      // Set 1 for tags that the user prefers
       const idx = tagIndexMap.get(tag.id);
       if (idx !== undefined) vector[idx] = 1;
     }
-    matrix[user.id] = vector; // Assign vector to the user in the matrix
+    matrix[user.id] = vector;
   }
-
   return matrix;
 }
 
@@ -40,55 +32,74 @@ export function predictSimilarUsers(
   matrix: RatingMatrix,
   threshold = 0.3
 ): string[] {
-  // Get the target user's interaction vector (postId -> weight)
   const targetVector = matrix[targetUserId];
   if (!targetVector) return [];
 
-  return (
-    Object.entries(matrix)
-      .filter(([userId]) => userId !== targetUserId) // Skip comparing user with themselves
-      // Calculate cosine similarity score for each user
-      .map(([userId, vector]) => ({
-        userId,
-        score: cosineSimilarity(targetVector, vector),
-      }))
-      .filter(({ score }) => score >= threshold) // Filter users with score above threshold
-      .sort((a, b) => b.score - a.score) // Sort users by score in descending order
-      .map(({ userId }) => userId) // Return only user IDs of similar users
-  );
+  return Object.entries(matrix)
+    .filter(([userId]) => userId !== targetUserId)
+    .map(([userId, vector]) => ({
+      userId,
+      score: cosineSimilarity(targetVector, vector),
+    }))
+    .filter(({ score }) => score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .map(({ userId }) => userId);
 }
 
-
 export function generateUserPostInteractionMatrix(
-  users: User[],
-  posts: Post[],
-  postLikes: PostLike[],
-  comments: Comment[]
+  users: { id: string }[],
+  posts: { id: string }[],
+  postLikes: { user?: { id: string }; post?: { id: string } }[],
+  comments: { user?: { id: string }; post?: { id: string } }[]
 ): { [userId: string]: { [postId: string]: number } } {
   const matrix: { [userId: string]: { [postId: string]: number } } = {};
 
-  // Initialize each user's row in the matrix
-  for (const user of users) {
-    matrix[user.id] = {};
-  }
+  for (const user of users) matrix[user.id] = {};
 
-  // Assign +2 for each like (heavier weight)
   for (const like of postLikes) {
-    const userId = like.user.id;
-    const postId = like.post.id;
-    if (matrix[userId]) {
-      matrix[userId][postId] = (matrix[userId][postId] || 0) + 2; // Like weight
+    const userId = like.user?.id;
+    const postId = like.post?.id;
+    if (userId && postId && matrix[userId]) {
+      matrix[userId][postId] = (matrix[userId][postId] || 0) + 2;
     }
   }
 
-  // Assign +1 for each comment
   for (const comment of comments) {
-    const userId = comment.user.id;
-    const postId = comment.post.id;
-    if (matrix[userId]) {
-      matrix[userId][postId] = (matrix[userId][postId] || 0) + 1; // Comment weight
+    const userId = comment.user?.id;
+    const postId = comment.post?.id;
+    if (userId && postId && matrix[userId]) {
+      matrix[userId][postId] = (matrix[userId][postId] || 0) + 1;
     }
   }
 
   return matrix;
+}
+
+export function predictSimilarUsersByInteractions(
+  userId: string,
+  matrix: { [userId: string]: { [postId: string]: number } },
+  threshold = 0.2
+): string[] {
+  const targetVector = matrix[userId];
+  if (!targetVector) return [];
+
+  const postIds = Array.from(
+    new Set(Object.values(matrix).flatMap((m) => Object.keys(m)))
+  );
+  const getVector = (userMap: { [postId: string]: number }) =>
+    postIds.map((postId) => userMap[postId] || 0);
+
+  const targetVec = getVector(targetVector);
+
+  return Object.entries(matrix)
+    .filter(([id]) => id !== userId)
+    .map(([otherUserId, otherMap]) => {
+      return {
+        userId: otherUserId,
+        score: cosineSimilarity(targetVec, getVector(otherMap)),
+      };
+    })
+    .filter(({ score }) => score >= threshold)
+    .sort((a, b) => b.score - a.score)
+    .map(({ userId }) => userId);
 }
