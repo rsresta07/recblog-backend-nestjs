@@ -7,6 +7,8 @@ import { ILike, In, Repository, TypeORMError } from "typeorm";
 import { User } from "../user/entities/user.entity";
 import { Tag } from "../tags/entities/tag.entity";
 import generateSlug from "../utils/helpers/generateSlug";
+import { z } from "zod";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 
 @Injectable()
 export class PostService {
@@ -26,6 +28,19 @@ export class PostService {
         throw new HttpException(
           `User with slug '${userSlug}' not found`,
           HttpStatus.NOT_FOUND
+        );
+      }
+
+      const moderation = await this.moderateContent(
+        createPostDto.title,
+        createPostDto.description // Your DTO maps content to description
+      );
+
+      // If the AI flags the content, block the creation and return a 403 Forbidden
+      if (!moderation.isApproved) {
+        throw new HttpException(
+          `Post rejected by moderation: ${moderation.reason}`,
+          HttpStatus.FORBIDDEN
         );
       }
 
@@ -480,6 +495,62 @@ export class PostService {
       throw new HttpException(
         `Search failed: ${error.message}`,
         HttpStatus.BAD_REQUEST
+      );
+    }
+  }
+
+  /**
+   * AI Content Moderation Gatekeeper
+   * Evaluates title and content against community guidelines.
+   */
+  private async moderateContent(title: string, content: string) {
+    const llm = new ChatGoogleGenerativeAI({
+      model: "gemini-2.5-flash",
+      temperature: 0.0, // 👈 Zero creativity, maximum strictness
+      maxRetries: 2,
+    });
+
+    // Define the exact shape we need back
+    const moderationSchema = z.object({
+      isApproved: z
+        .boolean()
+        .describe(
+          "True if the content is safe, false if it violates guidelines."
+        ),
+      reason: z
+        .string()
+        .nullable()
+        .describe(
+          "If rejected, a short 1-sentence explanation of the violation. Null if approved."
+        ),
+    });
+
+    const structuredLlm = llm.withStructuredOutput(moderationSchema);
+
+    const prompt = `
+      You are a strict, objective content moderator for a professional blogging platform.
+      Review the following blog post title and content.
+      
+      Community Guidelines - Reject if the post contains:
+      1. Hate speech, racism, harassment, or bullying.
+      2. Sexually explicit, gory, or NSFW content.
+      3. SEO spam, keyword stuffing, deceptive practices, or obvious phishing links.
+      4. Promotion of illegal acts or violence.
+
+      Title: ${title}
+      Content: ${content}
+      
+      Analyze the content and return your verdict.
+    `;
+
+    try {
+      return await structuredLlm.invoke(prompt);
+    } catch (error) {
+      console.error("Moderation AI Error:", error);
+      // If the AI fails, we throw a 503 so the user knows it's a system issue, not their content.
+      throw new HttpException(
+        "Content moderation service temporarily unavailable. Please try publishing later.",
+        HttpStatus.SERVICE_UNAVAILABLE
       );
     }
   }
