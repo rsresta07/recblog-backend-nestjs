@@ -29,6 +29,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
+    "@langchain/core": "^1.1.36",
+    "@langchain/google-genai": "^2.1.26",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
@@ -58,7 +60,8 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "sequelize": "^6.37.3",
-    "typeorm": "^0.3.22"
+    "typeorm": "^0.3.22",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

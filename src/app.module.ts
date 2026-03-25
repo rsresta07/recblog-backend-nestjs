@@ -21,6 +21,7 @@ import { Comment } from "./post/entities/comment.entity";
 import { Tag } from "./tags/entities/tag.entity";
 import { RecommendationServiceModule } from "./recommendation/recommendation.module";
 import { SeederService } from "./seeder/seeder.service";
+import { MagicFixModule } from './magic-fix/magic-fix.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SeederService } from "./seeder/seeder.service";
     FollowsModule,
     CommentsModule,
     RecommendationServiceModule,
+    MagicFixModule,
   ],
   controllers: [AppController],
   providers: [
@@ -48,6 +50,6 @@ export class AppModule implements OnModuleInit {
   constructor(private readonly seederService: SeederService) {}
 
   async onModuleInit() {
-    await this.seederService.run();
+    // await this.seederService.run();
   }
 }
